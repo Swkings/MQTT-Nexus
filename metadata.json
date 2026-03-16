@@ -1,0 +1,5 @@
+{
+  "name": "MQTT Nexus",
+  "description": "A modern, real-time MQTT message subscription client with JSON formatting and diff support.",
+  "requestFramePermissions": []
+}
