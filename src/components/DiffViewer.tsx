@@ -9,7 +9,8 @@ interface DiffViewerProps {
   className?: string;
   viewMode?: 'inline' | 'latest' | 'split';
   onChartClick?: (path: string) => void;
-  activeChartPath?: string | null;
+  activeChartPaths?: string[];
+  noScroll?: boolean;
 }
 
 export function syntaxHighlight(json: string) {
@@ -56,7 +57,7 @@ export function getLinePaths(jsonString: string): string[] {
   return paths;
 }
 
-export function DiffViewer({ oldValue, newValue, className, viewMode = 'inline', onChartClick, activeChartPath }: DiffViewerProps) {
+export function DiffViewer({ oldValue, newValue, className, viewMode = 'inline', onChartClick, activeChartPaths = [], noScroll = false }: DiffViewerProps) {
   const diffs = useMemo(() => {
     try {
       // Try parsing as JSON first
@@ -106,10 +107,13 @@ export function DiffViewer({ oldValue, newValue, className, viewMode = 'inline',
             <Copy className="w-3.5 h-3.5" />
           </button>
         </div>
-        <div className="flex-1 overflow-auto custom-scrollbar p-2 whitespace-pre-wrap">
+        <div className={cn(
+          "flex-1 p-2 whitespace-pre-wrap",
+          noScroll ? "overflow-visible" : "overflow-auto custom-scrollbar"
+        )}>
           {formattedLatest.split('\n').map((line, i) => {
             const path = newPaths[i];
-            const isActive = activeChartPath === path;
+            const isActive = activeChartPaths.includes(path);
             return (
               <div key={i} className={cn("px-2 py-0.5 whitespace-pre flex items-center hover:bg-slate-800/50 transition-colors", isActive && "bg-cyan-900/30")}>
                 {path && onChartClick && (
@@ -162,7 +166,10 @@ export function DiffViewer({ oldValue, newValue, className, viewMode = 'inline',
             </button>
           </div>
         </div>
-        <div className="flex-1 overflow-auto custom-scrollbar p-2">
+        <div className={cn(
+          "flex-1 p-2",
+          noScroll ? "overflow-visible" : "overflow-auto custom-scrollbar"
+        )}>
           <div className="grid grid-cols-2 gap-4 min-w-max">
             <div>
               {diffs.map((part, index) => {
@@ -179,7 +186,7 @@ export function DiffViewer({ oldValue, newValue, className, viewMode = 'inline',
 
                 return lines.map((line, i) => {
                   const path = oldPaths[oldLineIdx++];
-                  const isActive = activeChartPath === path;
+                  const isActive = activeChartPaths.includes(path);
                   return (
                     <div key={`${index}-${i}`} className={cn(
                       "px-2 py-0.5 whitespace-pre min-h-[20px] flex items-center",
@@ -220,7 +227,7 @@ export function DiffViewer({ oldValue, newValue, className, viewMode = 'inline',
 
                 return lines.map((line, i) => {
                   const path = newPaths[newLineIdx++];
-                  const isActive = activeChartPath === path;
+                  const isActive = activeChartPaths.includes(path);
                   return (
                     <div key={`${index}-${i}`} className={cn(
                       "px-2 py-0.5 whitespace-pre min-h-[20px] flex items-center",
@@ -267,7 +274,10 @@ export function DiffViewer({ oldValue, newValue, className, viewMode = 'inline',
           <Copy className="w-3.5 h-3.5" />
         </button>
       </div>
-      <div className="flex-1 overflow-auto custom-scrollbar py-2">
+      <div className={cn(
+        "flex-1 py-2",
+        noScroll ? "overflow-visible" : "overflow-auto custom-scrollbar"
+      )}>
         <div className="min-w-max">
           {(() => {
             const rows: React.ReactNode[] = [];
@@ -288,7 +298,7 @@ export function DiffViewer({ oldValue, newValue, className, viewMode = 'inline',
                 for (let j = 0; j < maxLines; j++) {
                   if (j < removedLines.length) {
                     const path = oldPaths[oldLineIdx++];
-                    const isActive = activeChartPath === path;
+                    const isActive = activeChartPaths.includes(path);
                     rows.push(
                       <div key={`removed-${i}-${j}`} className={cn("flex px-2 py-0.5 bg-rose-500/20 transition-colors items-center", isActive && "bg-rose-500/30")}>
                         <div className="w-6 shrink-0 select-none text-right pr-2 mr-2 border-r border-slate-700/50 text-rose-500">-</div>
@@ -311,7 +321,7 @@ export function DiffViewer({ oldValue, newValue, className, viewMode = 'inline',
                   }
                   if (j < addedLines.length) {
                     const path = newPaths[newLineIdx++];
-                    const isActive = activeChartPath === path;
+                    const isActive = activeChartPaths.includes(path);
                     rows.push(
                       <div key={`added-${i}-${j}`} className={cn("flex px-2 py-0.5 bg-emerald-500/20 transition-colors items-center", isActive && "bg-emerald-500/30")}>
                         <div className="w-6 shrink-0 select-none text-right pr-2 mr-2 border-r border-slate-700/50 text-emerald-500">+</div>
@@ -346,7 +356,7 @@ export function DiffViewer({ oldValue, newValue, className, viewMode = 'inline',
                   const path = isAdded ? newPaths[newLineIdx++] : (isRemoved ? oldPaths[oldLineIdx++] : newPaths[newLineIdx++]);
                   if (!isAdded && !isRemoved) oldLineIdx++; // Increment oldLineIdx for unchanged lines too
                   
-                  const isActive = activeChartPath === path;
+                  const isActive = activeChartPaths.includes(path);
                   
                   rows.push(
                     <div key={`${i}-${j}`} className={cn(

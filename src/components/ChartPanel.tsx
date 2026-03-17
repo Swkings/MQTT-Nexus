@@ -12,14 +12,16 @@ import {
   ZAxis
 } from 'recharts';
 import { X, TrendingUp } from 'lucide-react';
+import { cn } from '../lib/utils';
 
 interface ChartPanelProps {
   data: any[];
   path: string;
   onClose: () => void;
+  compact?: boolean;
 }
 
-export function ChartPanel({ data, path, onClose }: ChartPanelProps) {
+export function ChartPanel({ data, path, onClose, compact = false }: ChartPanelProps) {
   // Determine if data is mostly numeric or categorical
   const isNumeric = useMemo(() => {
     const numericCount = data.filter(d => typeof d.value === 'number' && !isNaN(d.value)).length;
@@ -34,21 +36,24 @@ export function ChartPanel({ data, path, onClose }: ChartPanelProps) {
   }, [data, isNumeric]);
 
   return (
-    <div className="h-64 border-t border-slate-700/50 bg-slate-900/50 flex flex-col shrink-0">
+    <div className={cn(
+      "border-slate-700/50 bg-slate-900/50 flex flex-col shrink-0",
+      compact ? "h-56" : "h-64 border-t"
+    )}>
       <div className="flex items-center justify-between px-4 py-2 border-b border-slate-700/50 bg-slate-800/50">
-        <div className="flex items-center gap-2 text-sm font-medium text-slate-300">
-          <TrendingUp className="w-4 h-4 text-cyan-400" />
-          <span>Monitoring: <span className="text-cyan-300 font-mono">{path}</span></span>
-          <span className="text-xs text-slate-500 ml-2">({chartData.length} data points)</span>
+        <div className="flex items-center gap-2 text-sm font-medium text-slate-300 overflow-hidden">
+          <TrendingUp className="w-4 h-4 text-cyan-400 shrink-0" />
+          <span className="truncate">Monitoring: <span className="text-cyan-300 font-mono">{path}</span></span>
+          {!compact && <span className="text-xs text-slate-500 ml-2 shrink-0">({chartData.length} data points)</span>}
         </div>
         <button
           onClick={onClose}
-          className="p-1 text-slate-500 hover:text-slate-300 hover:bg-slate-700 rounded transition-colors"
+          className="p-1 text-slate-500 hover:text-slate-300 hover:bg-slate-700 rounded transition-colors shrink-0"
         >
           <X className="w-4 h-4" />
         </button>
       </div>
-      <div className="flex-1 p-4 min-h-0">
+      <div className="flex-1 p-2 min-h-0">
         {chartData.length === 0 ? (
           <div className="h-full flex items-center justify-center text-slate-500 text-sm">
             No valid data points found for this field.
@@ -56,20 +61,22 @@ export function ChartPanel({ data, path, onClose }: ChartPanelProps) {
         ) : (
           <ResponsiveContainer width="100%" height="100%">
             {isNumeric ? (
-              <LineChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
+              <LineChart data={chartData} margin={{ top: 5, right: 10, bottom: 5, left: -20 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
                 <XAxis 
                   dataKey="time" 
                   stroke="#64748b" 
                   fontSize={10} 
                   tickMargin={10}
-                  minTickGap={30}
+                  minTickGap={compact ? 50 : 30}
+                  hide={compact}
                 />
                 <YAxis 
                   stroke="#64748b" 
                   fontSize={10} 
                   tickFormatter={(val) => typeof val === 'number' ? val.toLocaleString() : val}
                   domain={['auto', 'auto']}
+                  width={40}
                 />
                 <Tooltip 
                   contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '0.375rem', fontSize: '12px' }}
@@ -81,27 +88,28 @@ export function ChartPanel({ data, path, onClose }: ChartPanelProps) {
                   dataKey="value" 
                   stroke="#22d3ee" 
                   strokeWidth={2}
-                  dot={{ r: 3, fill: '#0f172a', strokeWidth: 2 }}
-                  activeDot={{ r: 5, fill: '#22d3ee', stroke: '#0f172a' }}
+                  dot={{ r: 2, fill: '#0f172a', strokeWidth: 1 }}
+                  activeDot={{ r: 4, fill: '#22d3ee', stroke: '#0f172a' }}
                   isAnimationActive={false}
                 />
               </LineChart>
             ) : (
-              <ScatterChart margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
+              <ScatterChart margin={{ top: 5, right: 10, bottom: 5, left: -20 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
                 <XAxis 
                   dataKey="time" 
                   stroke="#64748b" 
                   fontSize={10} 
                   tickMargin={10}
-                  minTickGap={30}
+                  minTickGap={compact ? 50 : 30}
+                  hide={compact}
                 />
                 <YAxis 
                   dataKey="value" 
                   type="category" 
                   stroke="#64748b" 
                   fontSize={10}
-                  width={100}
+                  width={40}
                 />
                 <ZAxis range={[50, 50]} />
                 <Tooltip 
