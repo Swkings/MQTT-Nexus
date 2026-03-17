@@ -2,7 +2,8 @@ import React, { useMemo, useState } from 'react';
 import { MqttMessage } from '../hooks/useMqtt';
 import { DiffViewer } from './DiffViewer';
 import { MessageCard } from './MessageCard';
-import { Activity, SplitSquareHorizontal, Play, Pause, Trash2, History, Filter, LayoutTemplate, Columns, FileJson, ArrowDownUp } from 'lucide-react';
+import { ChartPanel } from './ChartPanel';
+import { Activity, SplitSquareHorizontal, Play, Pause, Trash2, History, Filter, LayoutTemplate, Columns, FileJson, ArrowDownUp, Calendar } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
 
@@ -19,6 +20,7 @@ export function TopicView({ topic, messages, onClear }: TopicViewProps) {
   const [diffMode, setDiffMode] = useState<'inline' | 'latest' | 'split'>('inline');
   const [timeFilter, setTimeFilter] = useState<'all' | '1m' | '5m' | '15m'>('all');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [activeChartPath, setActiveChartPath] = useState<string | null>(null);
 
   const handlePauseToggle = () => {
     if (isPaused) {
@@ -54,6 +56,33 @@ export function TopicView({ topic, messages, onClear }: TopicViewProps) {
     if (!topic) return null;
     return displayMessages.find(m => m.topic === topic);
   }, [topic, displayMessages]);
+
+  const chartData = useMemo(() => {
+    if (!activeChartPath || !topicMessages.length) return [];
+    
+    // Sort chronologically (oldest to newest)
+    const sortedMessages = [...topicMessages].sort((a, b) => a.timestamp - b.timestamp);
+    
+    return sortedMessages.map(msg => {
+      try {
+        const payload = JSON.parse(msg.payload);
+        const keys = activeChartPath.split('.');
+        let val: any = payload;
+        for (const key of keys) {
+          if (val === undefined || val === null) break;
+          val = val[key];
+        }
+        
+        return {
+          time: new Date(msg.timestamp).toLocaleTimeString(),
+          timestamp: msg.timestamp,
+          value: val
+        };
+      } catch {
+        return { time: new Date(msg.timestamp).toLocaleTimeString(), timestamp: msg.timestamp, value: null };
+      }
+    }).filter(d => d.value !== null && d.value !== undefined);
+  }, [activeChartPath, topicMessages]);
 
   if (!topic) {
     return (
@@ -127,10 +156,23 @@ export function TopicView({ topic, messages, onClear }: TopicViewProps) {
           {latestMessage ? (
             <div className="p-4 sm:p-6 flex-1 flex flex-col overflow-hidden">
               <div className="flex items-center justify-between mb-3 shrink-0">
-                <h3 className="text-sm font-medium text-slate-300 flex items-center gap-2">
-                  <SplitSquareHorizontal className="w-4 h-4 text-emerald-400" />
-                  Latest Message
-                </h3>
+                <div className="flex items-center gap-4">
+                  <h3 className="text-sm font-medium text-slate-300 flex items-center gap-2">
+                    <SplitSquareHorizontal className="w-4 h-4 text-emerald-400" />
+                    Latest Message
+                  </h3>
+                  <div className="flex items-center gap-3 text-xs text-slate-500 font-mono bg-slate-800/50 px-2 py-1 rounded-md border border-slate-700/50">
+                    <span className="flex items-center gap-1">
+                      <Calendar className="w-3 h-3" />
+                      {new Date(latestMessage.timestamp).toLocaleString()}
+                    </span>
+                    <span className="w-px h-3 bg-slate-700"></span>
+                    <span className="flex items-center gap-1">
+                      <Activity className="w-3 h-3" />
+                      QoS {latestMessage.qos}
+                    </span>
+                  </div>
+                </div>
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => setDiffMode('latest')}
@@ -170,8 +212,17 @@ export function TopicView({ topic, messages, onClear }: TopicViewProps) {
                   newValue={latestMessage.payload} 
                   viewMode={diffMode}
                   className="h-full"
+                  onChartClick={setActiveChartPath}
+                  activeChartPath={activeChartPath}
                 />
               </div>
+              {activeChartPath && (
+                <ChartPanel 
+                  data={chartData} 
+                  path={activeChartPath} 
+                  onClose={() => setActiveChartPath(null)} 
+                />
+              )}
             </div>
           ) : (
             <div className="flex-1 flex items-center justify-center text-slate-500">
