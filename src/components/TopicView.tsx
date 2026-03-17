@@ -4,7 +4,7 @@ import { DiffViewer } from './DiffViewer';
 import { MessageCard } from './MessageCard';
 import { ChartPanel } from './ChartPanel';
 import { CodeGenModal } from './CodeGenModal';
-import { Activity, SplitSquareHorizontal, Play, Pause, Trash2, History, Filter, LayoutTemplate, Columns, FileJson, ArrowDownUp, Calendar, Maximize2, Minimize2, X, Code2, Clock, Hash, Copy, Check } from 'lucide-react';
+import { Activity, SplitSquareHorizontal, Play, Pause, Trash2, History, Filter, LayoutTemplate, Columns, FileJson, ArrowDownUp, Calendar, Maximize2, Minimize2, X, Code2, Clock, Hash, Copy, Check, Search } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
 import { format } from 'date-fns';
@@ -48,6 +48,7 @@ export function TopicView({ topic, messages, onClear }: TopicViewProps) {
   const [selectedFields, setSelectedFields] = useState<string[]>([]);
   const [showSelectedOnly, setShowSelectedOnly] = useState(false);
   const [showFieldPicker, setShowFieldPicker] = useState(false);
+  const [fieldSearch, setFieldSearch] = useState('');
 
   const handleMouseDown = (e: React.MouseEvent) => {
     setIsResizing(true);
@@ -381,6 +382,17 @@ export function TopicView({ topic, messages, onClear }: TopicViewProps) {
                     >
                       {showSelectedOnly ? 'Show Full Data' : 'Show Selected Fields'}
                     </button>
+
+                    <div className="relative flex-1 max-w-[200px]">
+                      <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500" />
+                      <input
+                        type="text"
+                        placeholder="Search fields..."
+                        value={fieldSearch}
+                        onChange={(e) => setFieldSearch(e.target.value)}
+                        className="w-full bg-slate-800/50 border border-slate-700/50 rounded-lg pl-8 pr-3 py-1.5 text-xs text-slate-300 placeholder:text-slate-600 focus:outline-none focus:border-cyan-500/50 transition-colors"
+                      />
+                    </div>
                   </div>
 
                   <AnimatePresence>
@@ -401,21 +413,23 @@ export function TopicView({ topic, messages, onClear }: TopicViewProps) {
                           </button>
                         </div>
                         <div className="flex flex-wrap gap-2 max-h-[200px] overflow-y-auto custom-scrollbar p-1">
-                          {allLatestFields.map(field => (
-                            <button
-                              key={field}
-                              onClick={() => setSelectedFields(prev => prev.includes(field) ? prev.filter(f => f !== field) : [...prev, field])}
-                              className={cn(
-                                "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-mono transition-all border",
-                                selectedFields.includes(field)
-                                  ? "bg-cyan-500/20 text-cyan-300 border-cyan-500/30"
-                                  : "bg-slate-800/50 text-slate-500 border-slate-700 hover:border-slate-600"
-                              )}
-                            >
-                              {selectedFields.includes(field) && <Check className="w-3 h-3" />}
-                              {field}
-                            </button>
-                          ))}
+                          {allLatestFields
+                            .filter(field => field.toLowerCase().includes(fieldSearch.toLowerCase()))
+                            .map(field => (
+                              <button
+                                key={field}
+                                onClick={() => setSelectedFields(prev => prev.includes(field) ? prev.filter(f => f !== field) : [...prev, field])}
+                                className={cn(
+                                  "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-mono transition-all border",
+                                  selectedFields.includes(field)
+                                    ? "bg-cyan-500/20 text-cyan-300 border-cyan-500/30"
+                                    : "bg-slate-800/50 text-slate-500 border-slate-700 hover:border-slate-600"
+                                )}
+                              >
+                                {selectedFields.includes(field) && <Check className="w-3 h-3" />}
+                                {field}
+                              </button>
+                            ))}
                         </div>
                       </motion.div>
                     )}
