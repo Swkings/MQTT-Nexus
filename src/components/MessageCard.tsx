@@ -1,9 +1,9 @@
 import React, { useState, useMemo } from 'react';
 import { format } from 'date-fns';
-import { ChevronDown, ChevronUp, FileJson, FileText, Activity, Clock } from 'lucide-react';
+import { ChevronDown, ChevronUp, FileJson, FileText, Activity, Clock, Copy } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { MqttMessage } from '../hooks/useMqtt';
-import { DiffViewer } from './DiffViewer';
+import { DiffViewer, syntaxHighlight } from './DiffViewer';
 import { cn } from '../lib/utils';
 
 interface MessageCardProps {
@@ -131,7 +131,11 @@ export function MessageCard({ message, showDiffByDefault = false }: MessageCardP
                   <DiffViewer oldValue={message.previousPayload} newValue={message.payload} />
                 ) : (
                   <pre className="font-mono text-xs text-slate-300 whitespace-pre-wrap overflow-x-auto p-4 rounded-md bg-slate-900/80 border border-slate-700/50 shadow-inner max-h-[400px] overflow-y-auto custom-scrollbar">
-                    <code>{viewMode === 'formatted' ? formattedPayload : message.payload}</code>
+                    {viewMode === 'formatted' && isJson ? (
+                      <code dangerouslySetInnerHTML={{ __html: syntaxHighlight(formattedPayload) }} />
+                    ) : (
+                      <code>{viewMode === 'formatted' ? formattedPayload : message.payload}</code>
+                    )}
                   </pre>
                 )}
                 
@@ -140,7 +144,7 @@ export function MessageCard({ message, showDiffByDefault = false }: MessageCardP
                   className="absolute top-2 right-2 p-1.5 bg-slate-800/80 hover:bg-cyan-500/20 text-slate-400 hover:text-cyan-300 rounded-md border border-slate-700/50 opacity-0 group-hover/copy:opacity-100 transition-all backdrop-blur-sm"
                   title="Copy to clipboard"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+                  <Copy className="w-3.5 h-3.5" />
                 </button>
               </div>
             </div>

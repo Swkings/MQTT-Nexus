@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Rss, Plus, Trash2, Hash, ChevronDown, ChevronUp } from 'lucide-react';
+import { Rss, Plus, Trash2, Hash, ChevronDown, ChevronUp, Database } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -8,9 +8,11 @@ interface SubscriptionPanelProps {
   subscriptions: string[];
   onSubscribe: (topic: string, qos: 0 | 1 | 2) => void;
   onUnsubscribe: (topic: string) => void;
+  messageLimit: number;
+  setMessageLimit: (limit: number) => void;
 }
 
-export function SubscriptionPanel({ status, subscriptions, onSubscribe, onUnsubscribe }: SubscriptionPanelProps) {
+export function SubscriptionPanel({ status, subscriptions, onSubscribe, onUnsubscribe, messageLimit, setMessageLimit }: SubscriptionPanelProps) {
   const [topic, setTopic] = useState('#');
   const [isCollapsed, setIsCollapsed] = useState(false);
 
@@ -52,6 +54,21 @@ export function SubscriptionPanel({ status, subscriptions, onSubscribe, onUnsubs
             className="flex flex-col overflow-hidden"
           >
             <div className="px-6 pb-6 flex flex-col">
+              <div className="flex items-center justify-between mb-4 bg-slate-900/30 p-2.5 rounded-lg border border-slate-700/50">
+                <span className="text-xs text-slate-400 font-medium flex items-center gap-2">
+                  <Database className="w-3.5 h-3.5" />
+                  History Limit (per topic)
+                </span>
+                <input
+                  type="number"
+                  min="1"
+                  max="1000"
+                  value={messageLimit}
+                  onChange={(e) => setMessageLimit(Math.max(1, parseInt(e.target.value) || 1))}
+                  className="w-16 px-2 py-1 text-xs bg-slate-800 border border-slate-600 rounded text-slate-300 focus:outline-none focus:border-purple-500 text-center"
+                />
+              </div>
+
               <form onSubmit={handleSubscribe} className="space-y-4 mb-6">
                 <div className="flex gap-2">
                   <div className="relative flex-1">

@@ -27,6 +27,8 @@ export default function App() {
     subscribe,
     unsubscribe,
     clearMessages,
+    messageLimit,
+    setMessageLimit,
   } = useMqtt();
 
   const [brokers, setBrokers] = useState<BrokerConfig[]>(() => {
@@ -289,6 +291,8 @@ export default function App() {
                       subscriptions={subscriptions}
                       onSubscribe={handleSubscribe}
                       onUnsubscribe={handleUnsubscribe}
+                      messageLimit={messageLimit}
+                      setMessageLimit={setMessageLimit}
                     />
                   </div>
                 </div>

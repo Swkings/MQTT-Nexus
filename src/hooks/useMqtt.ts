@@ -18,6 +18,21 @@ export function useMqtt() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [messageCounts, setMessageCounts] = useState<Record<string, number>>({});
   
+  const [messageLimit, _setMessageLimit] = useState(20);
+  const messageLimitRef = useRef(20);
+
+  const setMessageLimit = useCallback((limit: number) => {
+    _setMessageLimit(limit);
+    messageLimitRef.current = limit;
+    setMessages(prev => {
+      const counts: Record<string, number> = {};
+      return prev.filter(m => {
+        counts[m.topic] = (counts[m.topic] || 0) + 1;
+        return counts[m.topic] <= limit;
+      });
+    });
+  }, []);
+  
   const lastMessagePerTopic = useRef<Record<string, string>>({});
 
   const connect = useCallback((url: string, options: IClientOptions) => {
@@ -66,7 +81,16 @@ export function useMqtt() {
           
           lastMessagePerTopic.current[topic] = payloadString;
           
-          return [newMessage, ...prev].slice(0, 500); // Keep last 500 messages
+          let currentTopicCount = 0;
+          const filteredPrev = prev.filter(m => {
+            if (m.topic === topic) {
+              currentTopicCount++;
+              return currentTopicCount < messageLimitRef.current;
+            }
+            return true;
+          });
+          
+          return [newMessage, ...filteredPrev];
         });
 
         setMessageCounts((prev) => ({
@@ -134,5 +158,7 @@ export function useMqtt() {
     subscribe,
     unsubscribe,
     clearMessages,
+    messageLimit,
+    setMessageLimit,
   };
 }

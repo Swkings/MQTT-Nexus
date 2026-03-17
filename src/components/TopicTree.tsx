@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react';
-import { ChevronRight, ChevronDown, Folder, FolderOpen, Hash } from 'lucide-react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { ChevronRight, ChevronDown, Folder, FolderOpen, Hash, Search } from 'lucide-react';
 import { cn } from '../lib/utils';
 
 interface TreeNode {
@@ -42,16 +42,24 @@ const TreeNodeView = ({
   node, 
   selectedTopic, 
   onSelectTopic, 
-  level = 0 
+  level = 0,
+  isSearching = false
 }: { 
   node: TreeNode, 
   selectedTopic: string | null, 
   onSelectTopic: (t: string) => void, 
-  level?: number 
+  level?: number,
+  isSearching?: boolean
 }) => {
   const [expanded, setExpanded] = useState(false);
   const hasChildren = Object.keys(node.children).length > 0;
   const isSelected = selectedTopic === node.fullPath;
+
+  useEffect(() => {
+    if (isSearching) {
+      setExpanded(true);
+    }
+  }, [isSearching]);
 
   return (
     <div className="select-none">
@@ -111,6 +119,7 @@ const TreeNodeView = ({
               selectedTopic={selectedTopic} 
               onSelectTopic={onSelectTopic} 
               level={level + 1} 
+              isSearching={isSearching}
             />
           ))}
         </div>
@@ -127,20 +136,40 @@ interface TopicTreeProps {
 }
 
 export function TopicTree({ topics, messageCounts, selectedTopic, onSelectTopic }: TopicTreeProps) {
-  const tree = useMemo(() => buildTree(topics, messageCounts), [topics, messageCounts]);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const filteredTopics = useMemo(() => {
+    if (!searchQuery.trim()) return topics;
+    const lowerQuery = searchQuery.toLowerCase();
+    return topics.filter(t => t.toLowerCase().includes(lowerQuery));
+  }, [topics, searchQuery]);
+
+  const tree = useMemo(() => buildTree(filteredTopics, messageCounts), [filteredTopics, messageCounts]);
 
   return (
     <div className="bg-slate-800/50 backdrop-blur-xl border border-slate-700/50 rounded-2xl flex flex-col h-full overflow-hidden shadow-2xl shadow-black/50">
-      <div className="p-4 border-b border-slate-700/50 bg-slate-900/20 shrink-0">
+      <div className="p-4 border-b border-slate-700/50 bg-slate-900/20 shrink-0 space-y-3">
         <h2 className="text-sm font-semibold text-slate-100 flex items-center gap-2">
           <Folder className="w-4 h-4 text-purple-400" />
           Topic Tree
         </h2>
+        <div className="relative">
+          <div className="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none">
+            <Search className="h-3.5 w-3.5 text-slate-500" />
+          </div>
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Filter topics..."
+            className="block w-full pl-8 pr-3 py-1.5 border border-slate-700 rounded-md leading-5 bg-slate-900/50 text-slate-300 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 sm:text-xs transition-colors"
+          />
+        </div>
       </div>
       <div className="flex-1 overflow-y-auto custom-scrollbar p-2">
         {Object.keys(tree.children).length === 0 ? (
           <div className="text-center text-slate-500 text-xs py-8">
-            No topics yet
+            {searchQuery ? 'No matching topics' : 'No topics yet'}
           </div>
         ) : (
           Object.values(tree.children)
@@ -151,6 +180,7 @@ export function TopicTree({ topics, messageCounts, selectedTopic, onSelectTopic 
               node={child} 
               selectedTopic={selectedTopic} 
               onSelectTopic={onSelectTopic} 
+              isSearching={!!searchQuery}
             />
           ))
         )}
