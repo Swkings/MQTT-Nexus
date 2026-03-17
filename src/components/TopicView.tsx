@@ -357,18 +357,80 @@ export function TopicView({ topic, messages, onClear }: TopicViewProps) {
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => setShowFieldPicker(!showFieldPicker)}
-                      className={cn(
-                        "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all border",
-                        showFieldPicker 
-                          ? "bg-indigo-500/20 text-indigo-300 border-indigo-500/30" 
-                          : "bg-slate-700/50 text-slate-300 border-slate-600 hover:bg-slate-700"
-                      )}
-                    >
-                      <Filter className="w-3.5 h-3.5" />
-                      Fields {selectedFields.length > 0 && `(${selectedFields.length})`}
-                    </button>
+                    <div className="relative flex items-center bg-slate-800/50 border border-slate-700/50 rounded-lg overflow-visible">
+                      <button
+                        onClick={() => setShowFieldPicker(!showFieldPicker)}
+                        className={cn(
+                          "flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-all border-r border-slate-700/50",
+                          showFieldPicker ? "text-indigo-300" : "text-slate-300 hover:bg-slate-700/50"
+                        )}
+                      >
+                        <Filter className="w-3.5 h-3.5" />
+                        Fields {selectedFields.length > 0 && `(${selectedFields.length})`}
+                      </button>
+                      <div className="relative flex items-center min-w-[200px]">
+                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500" />
+                        <input
+                          type="text"
+                          placeholder="Search fields..."
+                          value={fieldSearch}
+                          onFocus={() => setShowFieldPicker(true)}
+                          onChange={(e) => setFieldSearch(e.target.value)}
+                          className="w-full bg-transparent pl-8 pr-3 py-1.5 text-xs text-slate-300 placeholder:text-slate-600 focus:outline-none transition-colors"
+                        />
+                      </div>
+
+                      <AnimatePresence>
+                        {showFieldPicker && (
+                          <motion.div
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: 10 }}
+                            className="absolute top-full left-0 mt-2 w-[450px] bg-slate-900 border border-slate-700 rounded-xl shadow-2xl z-50 p-4"
+                          >
+                            <div className="flex items-center justify-between mb-3">
+                              <span className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">Select Fields to Monitor</span>
+                              <div className="flex items-center gap-3">
+                                <button 
+                                  onClick={() => setSelectedFields([])}
+                                  className="text-[10px] text-rose-400 hover:text-rose-300 transition-colors"
+                                >
+                                  Clear All
+                                </button>
+                                <button 
+                                  onClick={() => setShowFieldPicker(false)}
+                                  className="text-slate-500 hover:text-slate-300"
+                                >
+                                  <X className="w-3 h-3" />
+                                </button>
+                              </div>
+                            </div>
+                            <div className="flex flex-wrap gap-2 max-h-[300px] overflow-y-auto custom-scrollbar p-1">
+                              {allLatestFields
+                                .filter(field => field.toLowerCase().includes(fieldSearch.toLowerCase()))
+                                .map(field => (
+                                  <button
+                                    key={field}
+                                    onClick={() => setSelectedFields(prev => prev.includes(field) ? prev.filter(f => f !== field) : [...prev, field])}
+                                    className={cn(
+                                      "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-mono transition-all border",
+                                      selectedFields.includes(field)
+                                        ? "bg-cyan-500/20 text-cyan-300 border-cyan-500/30"
+                                        : "bg-slate-800/50 text-slate-500 border-slate-700 hover:border-slate-600"
+                                    )}
+                                  >
+                                    {selectedFields.includes(field) && <Check className="w-3 h-3" />}
+                                    {field}
+                                  </button>
+                                ))}
+                              {allLatestFields.filter(field => field.toLowerCase().includes(fieldSearch.toLowerCase())).length === 0 && (
+                                <div className="text-xs text-slate-600 py-4 w-full text-center">No fields found matching "{fieldSearch}"</div>
+                              )}
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
 
                     <button
                       disabled={selectedFields.length === 0}
@@ -382,58 +444,7 @@ export function TopicView({ topic, messages, onClear }: TopicViewProps) {
                     >
                       {showSelectedOnly ? 'Show Full Data' : 'Show Selected Fields'}
                     </button>
-
-                    <div className="relative flex-1 max-w-[200px]">
-                      <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500" />
-                      <input
-                        type="text"
-                        placeholder="Search fields..."
-                        value={fieldSearch}
-                        onChange={(e) => setFieldSearch(e.target.value)}
-                        className="w-full bg-slate-800/50 border border-slate-700/50 rounded-lg pl-8 pr-3 py-1.5 text-xs text-slate-300 placeholder:text-slate-600 focus:outline-none focus:border-cyan-500/50 transition-colors"
-                      />
-                    </div>
                   </div>
-
-                  <AnimatePresence>
-                    {showFieldPicker && (
-                      <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: 'auto', opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        className="bg-slate-900/50 border border-slate-700/50 rounded-xl p-4 overflow-hidden"
-                      >
-                        <div className="flex items-center justify-between mb-3">
-                          <span className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">Select Fields to Monitor</span>
-                          <button 
-                            onClick={() => setSelectedFields([])}
-                            className="text-[10px] text-rose-400 hover:text-rose-300 transition-colors"
-                          >
-                            Clear All
-                          </button>
-                        </div>
-                        <div className="flex flex-wrap gap-2 max-h-[200px] overflow-y-auto custom-scrollbar p-1">
-                          {allLatestFields
-                            .filter(field => field.toLowerCase().includes(fieldSearch.toLowerCase()))
-                            .map(field => (
-                              <button
-                                key={field}
-                                onClick={() => setSelectedFields(prev => prev.includes(field) ? prev.filter(f => f !== field) : [...prev, field])}
-                                className={cn(
-                                  "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-mono transition-all border",
-                                  selectedFields.includes(field)
-                                    ? "bg-cyan-500/20 text-cyan-300 border-cyan-500/30"
-                                    : "bg-slate-800/50 text-slate-500 border-slate-700 hover:border-slate-600"
-                                )}
-                              >
-                                {selectedFields.includes(field) && <Check className="w-3 h-3" />}
-                                {field}
-                              </button>
-                            ))}
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
                 </div>
 
                 <div className={cn(
