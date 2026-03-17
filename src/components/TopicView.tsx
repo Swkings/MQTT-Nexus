@@ -123,10 +123,10 @@ export function TopicView({ topic, messages, onClear }: TopicViewProps) {
 
       <div className="flex-1 flex overflow-hidden">
         {/* Real-time Diff Window */}
-        <div className="flex-1 flex flex-col overflow-y-auto custom-scrollbar">
+        <div className="flex-1 flex flex-col overflow-hidden">
           {latestMessage ? (
-            <div className="p-4 sm:p-6 flex-1 flex flex-col">
-              <div className="flex items-center justify-between mb-3">
+            <div className="p-4 sm:p-6 flex-1 flex flex-col overflow-hidden">
+              <div className="flex items-center justify-between mb-3 shrink-0">
                 <h3 className="text-sm font-medium text-slate-300 flex items-center gap-2">
                   <SplitSquareHorizontal className="w-4 h-4 text-emerald-400" />
                   Latest Message
@@ -164,7 +164,7 @@ export function TopicView({ topic, messages, onClear }: TopicViewProps) {
                   </button>
                 </div>
               </div>
-              <div className="flex-1 overflow-y-auto custom-scrollbar">
+              <div className="flex-1 overflow-hidden">
                 <DiffViewer 
                   oldValue={latestMessage.previousPayload || latestMessage.payload} 
                   newValue={latestMessage.payload} 

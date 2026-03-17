@@ -25,11 +25,12 @@ export function useMqtt() {
   const selectedTopicRef = useRef<string | null>(null);
 
   const setSelectedTopic = useCallback((topic: string | null) => {
+    const previousTopic = selectedTopicRef.current;
     _setSelectedTopic(topic);
     selectedTopicRef.current = topic;
     
     // When changing topics, enforce the limit on the previously selected topic
-    if (topic !== selectedTopicRef.current) {
+    if (topic !== previousTopic) {
       setMessages(prev => {
         const counts: Record<string, number> = {};
         return prev.filter(m => {
@@ -57,8 +58,6 @@ export function useMqtt() {
       });
     });
   }, []);
-  
-  const lastMessagePerTopic = useRef<Record<string, string>>({});
 
   const connect = useCallback((url: string, options: IClientOptions) => {
     setStatus('connecting');
@@ -95,16 +94,17 @@ export function useMqtt() {
         const payloadString = message.toString();
         
         setMessages((prev) => {
+          const prevTopicMessages = prev.filter(m => m.topic === topic);
+          const previousPayload = prevTopicMessages.length > 0 ? prevTopicMessages[0].payload : undefined;
+          
           const newMessage: MqttMessage = {
             id: Math.random().toString(36).substring(2, 9),
             topic,
             payload: payloadString,
             qos: packet.qos,
             timestamp: Date.now(),
-            previousPayload: lastMessagePerTopic.current[topic],
+            previousPayload,
           };
-          
-          lastMessagePerTopic.current[topic] = payloadString;
           
           let currentTopicCount = 0;
           const isSelected = selectedTopicRef.current === topic;
@@ -142,7 +142,6 @@ export function useMqtt() {
       setStatus('disconnected');
       setSubscriptions([]);
       setMessageCounts({});
-      lastMessagePerTopic.current = {};
     }
   }, [client]);
 
@@ -171,7 +170,6 @@ export function useMqtt() {
   const clearMessages = useCallback(() => {
     setMessages([]);
     setMessageCounts({});
-    lastMessagePerTopic.current = {};
   }, []);
 
   return {
