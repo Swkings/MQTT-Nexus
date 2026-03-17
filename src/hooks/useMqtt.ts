@@ -22,6 +22,14 @@ export function useMqtt() {
   const connect = useCallback((url: string, options: IClientOptions) => {
     setStatus('connecting');
     setErrorMsg(null);
+    
+    setClient((prevClient) => {
+      if (prevClient) {
+        prevClient.end();
+      }
+      return null;
+    });
+
     try {
       const mqttClient = mqtt.connect(url, {
         ...options,
