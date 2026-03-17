@@ -6,12 +6,12 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useMqtt } from './hooks/useMqtt';
 import { BrokerSidebar } from './components/BrokerSidebar';
-import { AddBrokerModal } from './components/AddBrokerModal';
+import { BrokerModal } from './components/BrokerModal';
 import { SubscriptionPanel } from './components/SubscriptionPanel';
 import { TopicTree } from './components/TopicTree';
 import { TopicView } from './components/TopicView';
 import { Activity, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Folder, FolderOpen } from 'lucide-react';
-import { BrokerConfig } from './types';
+import { BrokerConfig, SavedHost, SavedCredential } from './types';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from './lib/utils';
 
@@ -30,12 +30,50 @@ export default function App() {
 
   const [brokers, setBrokers] = useState<BrokerConfig[]>(() => {
     const saved = localStorage.getItem('mqtt_brokers');
-    return saved ? JSON.parse(saved) : [{
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        // Migrate legacy brokers that only have 'url'
+        return parsed.map((b: any) => {
+          if (b.url && !b.host) {
+            try {
+              const u = new URL(b.url);
+              return {
+                ...b,
+                protocol: u.protocol.replace(':', ''),
+                host: u.hostname,
+                port: parseInt(u.port) || (u.protocol === 'wss:' ? 443 : 80),
+                path: u.pathname || '/mqtt'
+              };
+            } catch (e) {
+              return { ...b, protocol: 'ws', host: 'localhost', port: 8083, path: '/mqtt' };
+            }
+          }
+          return b;
+        });
+      } catch (e) {
+        // Fallback if JSON parse fails
+      }
+    }
+    return [{
       id: 'default',
       name: 'EMQX Public',
-      url: 'ws://broker.emqx.io:8083/mqtt',
+      protocol: 'ws',
+      host: 'broker.emqx.io',
+      port: 8083,
+      path: '/mqtt',
       clientId: `mqttjs_${Math.random().toString(16).substr(2, 8)}`
     }];
+  });
+
+  const [savedHosts, setSavedHosts] = useState<SavedHost[]>(() => {
+    const saved = localStorage.getItem('mqtt_saved_hosts');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  const [savedCredentials, setSavedCredentials] = useState<SavedCredential[]>(() => {
+    const saved = localStorage.getItem('mqtt_saved_credentials');
+    return saved ? JSON.parse(saved) : [];
   });
 
   const [activeBrokerId, setActiveBrokerId] = useState<string | null>(null);
@@ -44,10 +82,19 @@ export default function App() {
   const [isLeftSidebarOpen, setIsLeftSidebarOpen] = useState(true);
   const [isTopicTreeOpen, setIsTopicTreeOpen] = useState(true);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [editingBroker, setEditingBroker] = useState<BrokerConfig | null>(null);
 
   useEffect(() => {
     localStorage.setItem('mqtt_brokers', JSON.stringify(brokers));
   }, [brokers]);
+
+  useEffect(() => {
+    localStorage.setItem('mqtt_saved_hosts', JSON.stringify(savedHosts));
+  }, [savedHosts]);
+
+  useEffect(() => {
+    localStorage.setItem('mqtt_saved_credentials', JSON.stringify(savedCredentials));
+  }, [savedCredentials]);
 
   const { topics, messageCounts } = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -60,12 +107,29 @@ export default function App() {
     };
   }, [messages]);
 
-  const handleAddBroker = (brokerData: Omit<BrokerConfig, 'id'>) => {
-    const newBroker: BrokerConfig = {
-      ...brokerData,
-      id: Math.random().toString(36).substr(2, 9)
-    };
-    setBrokers(prev => [...prev, newBroker]);
+  const handleSaveBroker = (brokerData: BrokerConfig | Omit<BrokerConfig, 'id'>) => {
+    if ('id' in brokerData && brokerData.id) {
+      // Edit existing
+      setBrokers(prev => prev.map(b => b.id === brokerData.id ? brokerData as BrokerConfig : b));
+      // If editing the active broker, reconnect
+      if (activeBrokerId === brokerData.id) {
+        disconnect();
+        const url = brokerData.url || `${brokerData.protocol}://${brokerData.host}:${brokerData.port}${brokerData.path}`;
+        connect(url, {
+          clientId: brokerData.clientId,
+          username: brokerData.username,
+          password: brokerData.password,
+          clean: true
+        });
+      }
+    } else {
+      // Add new
+      const newBroker: BrokerConfig = {
+        ...brokerData,
+        id: Math.random().toString(36).substr(2, 9)
+      };
+      setBrokers(prev => [...prev, newBroker]);
+    }
   };
 
   const handleDeleteBroker = (id: string) => {
@@ -77,11 +141,12 @@ export default function App() {
   };
 
   const handleSelectBroker = (broker: BrokerConfig) => {
+    const url = broker.url || `${broker.protocol}://${broker.host}:${broker.port}${broker.path}`;
     if (activeBrokerId === broker.id) {
       if (status === 'connected' || status === 'connecting') {
         disconnect();
       } else {
-        connect(broker.url, {
+        connect(url, {
           clientId: broker.clientId,
           username: broker.username,
           password: broker.password,
@@ -93,13 +158,23 @@ export default function App() {
       clearMessages();
       setSelectedTopic(null);
       setActiveBrokerId(broker.id);
-      connect(broker.url, {
+      connect(url, {
         clientId: broker.clientId,
         username: broker.username,
         password: broker.password,
         clean: true
       });
     }
+  };
+
+  const openAddModal = () => {
+    setEditingBroker(null);
+    setIsAddModalOpen(true);
+  };
+
+  const openEditModal = (broker: BrokerConfig) => {
+    setEditingBroker(broker);
+    setIsAddModalOpen(true);
   };
 
   return (
@@ -166,7 +241,8 @@ export default function App() {
                       status={status}
                       errorMsg={errorMsg}
                       onSelect={handleSelectBroker}
-                      onAdd={() => setIsAddModalOpen(true)}
+                      onAdd={openAddModal}
+                      onEdit={openEditModal}
                       onDelete={handleDeleteBroker}
                     />
                   </div>
@@ -217,10 +293,17 @@ export default function App() {
         </main>
       </div>
 
-      <AddBrokerModal
+      <BrokerModal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
-        onAdd={handleAddBroker}
+        onSave={handleSaveBroker}
+        initialData={editingBroker}
+        savedHosts={savedHosts}
+        onSaveHost={(host) => setSavedHosts(prev => [...prev, host])}
+        onDeleteHost={(id) => setSavedHosts(prev => prev.filter(h => h.id !== id))}
+        savedCredentials={savedCredentials}
+        onSaveCredential={(cred) => setSavedCredentials(prev => [...prev, cred])}
+        onDeleteCredential={(id) => setSavedCredentials(prev => prev.filter(c => c.id !== id))}
       />
     </div>
   );

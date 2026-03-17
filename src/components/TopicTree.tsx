@@ -102,7 +102,9 @@ const TreeNodeView = ({
       
       {expanded && hasChildren && (
         <div>
-          {Object.values(node.children).map(child => (
+          {Object.values(node.children)
+            .sort((a, b) => a.name.localeCompare(b.name))
+            .map(child => (
             <TreeNodeView 
               key={child.fullPath} 
               node={child} 
@@ -141,7 +143,9 @@ export function TopicTree({ topics, messageCounts, selectedTopic, onSelectTopic 
             No topics yet
           </div>
         ) : (
-          Object.values(tree.children).map(child => (
+          Object.values(tree.children)
+            .sort((a, b) => a.name.localeCompare(b.name))
+            .map(child => (
             <TreeNodeView 
               key={child.fullPath} 
               node={child} 

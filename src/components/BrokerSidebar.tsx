@@ -1,5 +1,5 @@
 import React from 'react';
-import { Server, Plus, Trash2, Plug, Unplug, AlertCircle } from 'lucide-react';
+import { Server, Plus, Trash2, Plug, Unplug, AlertCircle, Edit2 } from 'lucide-react';
 import { BrokerConfig } from '../types';
 import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
@@ -11,6 +11,7 @@ interface BrokerSidebarProps {
   errorMsg: string | null;
   onSelect: (broker: BrokerConfig) => void;
   onAdd: () => void;
+  onEdit: (broker: BrokerConfig) => void;
   onDelete: (id: string) => void;
 }
 
@@ -21,6 +22,7 @@ export function BrokerSidebar({
   errorMsg,
   onSelect,
   onAdd,
+  onEdit,
   onDelete,
 }: BrokerSidebarProps) {
   return (
@@ -53,6 +55,8 @@ export function BrokerSidebar({
           ) : (
             brokers.map((broker) => {
               const isActive = activeBrokerId === broker.id;
+              const displayUrl = broker.url || `${broker.protocol}://${broker.host}:${broker.port}${broker.path}`;
+              
               return (
                 <motion.div
                   key={broker.id}
@@ -88,12 +92,22 @@ export function BrokerSidebar({
                           </span>
                         )}
                       </div>
-                      <div className="text-xs text-slate-500 font-mono truncate" title={broker.url}>
-                        {broker.url}
+                      <div className="text-xs text-slate-500 font-mono truncate" title={displayUrl}>
+                        {displayUrl}
                       </div>
                     </div>
 
                     <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onEdit(broker);
+                        }}
+                        className="p-1.5 rounded-md text-slate-500 hover:text-cyan-400 hover:bg-cyan-500/10 transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
+                        title="Edit Broker"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </button>
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
