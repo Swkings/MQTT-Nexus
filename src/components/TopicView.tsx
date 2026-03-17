@@ -4,9 +4,26 @@ import { DiffViewer } from './DiffViewer';
 import { MessageCard } from './MessageCard';
 import { ChartPanel } from './ChartPanel';
 import { CodeGenModal } from './CodeGenModal';
-import { Activity, SplitSquareHorizontal, Play, Pause, Trash2, History, Filter, LayoutTemplate, Columns, FileJson, ArrowDownUp, Calendar, Maximize2, Minimize2, X, Code2 } from 'lucide-react';
+import { Activity, SplitSquareHorizontal, Play, Pause, Trash2, History, Filter, LayoutTemplate, Columns, FileJson, ArrowDownUp, Calendar, Maximize2, Minimize2, X, Code2, Clock, Hash, Copy, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
+import { format } from 'date-fns';
+
+function getAllPaths(obj: any, prefix = ''): string[] {
+  let paths: string[] = [];
+  if (obj && typeof obj === 'object' && !Array.isArray(obj)) {
+    for (const key in obj) {
+      const path = prefix ? `${prefix}.${key}` : key;
+      paths.push(path);
+      paths = paths.concat(getAllPaths(obj[key], path));
+    }
+  }
+  return paths;
+}
+
+function getValueByPath(obj: any, path: string): any {
+  return path.split('.').reduce((acc, part) => acc && acc[part], obj);
+}
 
 interface TopicViewProps {
   topic: string | null;
@@ -26,6 +43,11 @@ export function TopicView({ topic, messages, onClear }: TopicViewProps) {
   const [isCodeGenOpen, setIsCodeGenOpen] = useState(false);
   const [historyWidth, setHistoryWidth] = useState(500);
   const [isResizing, setIsResizing] = useState(false);
+
+  // Latest Message specific states
+  const [selectedFields, setSelectedFields] = useState<string[]>([]);
+  const [showSelectedOnly, setShowSelectedOnly] = useState(false);
+  const [showFieldPicker, setShowFieldPicker] = useState(false);
 
   const handleMouseDown = (e: React.MouseEvent) => {
     setIsResizing(true);
@@ -90,6 +112,53 @@ export function TopicView({ topic, messages, onClear }: TopicViewProps) {
     if (!topic) return null;
     return displayMessages.find(m => m.topic === topic);
   }, [topic, displayMessages]);
+
+  const parsedLatestPayload = useMemo(() => {
+    if (!latestMessage) return null;
+    try {
+      return JSON.parse(latestMessage.payload);
+    } catch {
+      return null;
+    }
+  }, [latestMessage]);
+
+  const allLatestFields = useMemo(() => {
+    if (!parsedLatestPayload) return [];
+    return getAllPaths(parsedLatestPayload);
+  }, [parsedLatestPayload]);
+
+  const filteredLatestPayload = useMemo(() => {
+    if (!showSelectedOnly || selectedFields.length === 0 || !parsedLatestPayload) {
+      return latestMessage?.payload;
+    }
+    const filtered: any = {};
+    selectedFields.forEach(path => {
+      const val = getValueByPath(parsedLatestPayload, path);
+      if (val !== undefined) {
+        filtered[path] = val;
+      }
+    });
+    return JSON.stringify(filtered, null, 2);
+  }, [parsedLatestPayload, selectedFields, showSelectedOnly, latestMessage]);
+
+  const filteredPreviousPayload = useMemo(() => {
+    if (!showSelectedOnly || selectedFields.length === 0 || !latestMessage?.previousPayload) {
+      return latestMessage?.previousPayload;
+    }
+    try {
+      const prevParsed = JSON.parse(latestMessage.previousPayload);
+      const filtered: any = {};
+      selectedFields.forEach(path => {
+        const val = getValueByPath(prevParsed, path);
+        if (val !== undefined) {
+          filtered[path] = val;
+        }
+      });
+      return JSON.stringify(filtered, null, 2);
+    } catch {
+      return latestMessage.previousPayload;
+    }
+  }, [latestMessage, selectedFields, showSelectedOnly]);
 
   const toggleChartPath = (path: string) => {
     setActiveChartPaths(prev => 
@@ -216,64 +285,150 @@ export function TopicView({ topic, messages, onClear }: TopicViewProps) {
           <div className="flex-1 flex flex-col overflow-hidden">
             {latestMessage ? (
               <div className="p-4 sm:p-6 flex-1 flex flex-col overflow-hidden">
-                <div className="flex items-center justify-between mb-3 shrink-0">
-                  <div className="flex items-center gap-4">
-                    <h3 className="text-sm font-medium text-slate-300 flex items-center gap-2">
-                      <SplitSquareHorizontal className="w-4 h-4 text-emerald-400" />
-                      Latest Message
-                    </h3>
-                    <div className="flex items-center gap-3 text-xs text-slate-500 font-mono bg-slate-800/50 px-2 py-1 rounded-md border border-slate-700/50">
-                      <span className="flex items-center gap-1">
-                        <Calendar className="w-3 h-3" />
-                        {new Date(latestMessage.timestamp).toLocaleString()}
-                      </span>
-                      <span className="w-px h-3 bg-slate-700"></span>
-                      <span className="flex items-center gap-1">
-                        <Activity className="w-3 h-3" />
-                        QoS {latestMessage.qos}
-                      </span>
+                <div className="flex flex-col gap-3 mb-4 shrink-0">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <h3 className="text-sm font-medium text-slate-300 flex items-center gap-2">
+                        <SplitSquareHorizontal className="w-4 h-4 text-emerald-400" />
+                        Latest Message
+                      </h3>
+                      <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1 bg-slate-800/50 px-2 py-1 rounded-md border border-slate-700/50 text-xs text-slate-400 font-mono">
+                          <Clock className="w-3 h-3 text-purple-400" />
+                          <span>{format(latestMessage.timestamp, 'yyyy-MM-dd HH:mm:ss.SSS')}</span>
+                          <button 
+                            onClick={() => navigator.clipboard.writeText(format(latestMessage.timestamp, 'yyyy-MM-dd HH:mm:ss.SSS'))}
+                            className="ml-1 p-0.5 hover:text-cyan-400 transition-colors"
+                            title="Copy formatted time"
+                          >
+                            <Copy className="w-3 h-3" />
+                          </button>
+                        </div>
+                        <div className="flex items-center gap-1 bg-slate-800/50 px-2 py-1 rounded-md border border-slate-700/50 text-xs text-slate-400 font-mono">
+                          <Hash className="w-3 h-3 text-emerald-400" />
+                          <span>{latestMessage.timestamp}</span>
+                          <button 
+                            onClick={() => navigator.clipboard.writeText(latestMessage.timestamp.toString())}
+                            className="ml-1 p-0.5 hover:text-cyan-400 transition-colors"
+                            title="Copy timestamp"
+                          >
+                            <Copy className="w-3 h-3" />
+                          </button>
+                        </div>
+                        <div className="flex items-center gap-1 bg-slate-800/50 px-2 py-1 rounded-md border border-slate-700/50 text-xs text-slate-400 font-mono">
+                          <Activity className="w-3 h-3 text-cyan-500" />
+                          QoS {latestMessage.qos}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setDiffMode('latest')}
+                        className={cn(
+                          "p-1.5 rounded-md transition-colors",
+                          diffMode === 'latest' ? "bg-cyan-500/20 text-cyan-400" : "text-slate-500 hover:text-slate-300 hover:bg-slate-800"
+                        )}
+                        title="Show Latest Data"
+                      >
+                        <FileJson className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => setDiffMode('inline')}
+                        className={cn(
+                          "p-1.5 rounded-md transition-colors",
+                          diffMode === 'inline' ? "bg-emerald-500/20 text-emerald-400" : "text-slate-500 hover:text-slate-300 hover:bg-slate-800"
+                        )}
+                        title="Show Inline Diff"
+                      >
+                        <LayoutTemplate className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => setDiffMode('split')}
+                        className={cn(
+                          "p-1.5 rounded-md transition-colors",
+                          diffMode === 'split' ? "bg-purple-500/20 text-purple-400" : "text-slate-500 hover:text-slate-300 hover:bg-slate-800"
+                        )}
+                        title="Show Split Diff"
+                      >
+                        <Columns className="w-4 h-4" />
+                      </button>
                     </div>
                   </div>
+
                   <div className="flex items-center gap-2">
                     <button
-                      onClick={() => setDiffMode('latest')}
+                      onClick={() => setShowFieldPicker(!showFieldPicker)}
                       className={cn(
-                        "p-1.5 rounded-md transition-colors",
-                        diffMode === 'latest' ? "bg-cyan-500/20 text-cyan-400" : "text-slate-500 hover:text-slate-300 hover:bg-slate-800"
+                        "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all border",
+                        showFieldPicker 
+                          ? "bg-indigo-500/20 text-indigo-300 border-indigo-500/30" 
+                          : "bg-slate-700/50 text-slate-300 border-slate-600 hover:bg-slate-700"
                       )}
-                      title="Show Latest Data"
                     >
-                      <FileJson className="w-4 h-4" />
+                      <Filter className="w-3.5 h-3.5" />
+                      Fields {selectedFields.length > 0 && `(${selectedFields.length})`}
                     </button>
+
                     <button
-                      onClick={() => setDiffMode('inline')}
+                      disabled={selectedFields.length === 0}
+                      onClick={() => setShowSelectedOnly(!showSelectedOnly)}
                       className={cn(
-                        "p-1.5 rounded-md transition-colors",
-                        diffMode === 'inline' ? "bg-emerald-500/20 text-emerald-400" : "text-slate-500 hover:text-slate-300 hover:bg-slate-800"
+                        "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all border disabled:opacity-50 disabled:cursor-not-allowed",
+                        showSelectedOnly 
+                          ? "bg-cyan-500/20 text-cyan-300 border-cyan-500/30" 
+                          : "bg-slate-700/50 text-slate-300 border-slate-600 hover:bg-slate-700"
                       )}
-                      title="Show Inline Diff"
                     >
-                      <LayoutTemplate className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => setDiffMode('split')}
-                      className={cn(
-                        "p-1.5 rounded-md transition-colors",
-                        diffMode === 'split' ? "bg-purple-500/20 text-purple-400" : "text-slate-500 hover:text-slate-300 hover:bg-slate-800"
-                      )}
-                      title="Show Split Diff"
-                    >
-                      <Columns className="w-4 h-4" />
+                      {showSelectedOnly ? 'Show Full Data' : 'Show Selected Fields'}
                     </button>
                   </div>
+
+                  <AnimatePresence>
+                    {showFieldPicker && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        className="bg-slate-900/50 border border-slate-700/50 rounded-xl p-4 overflow-hidden"
+                      >
+                        <div className="flex items-center justify-between mb-3">
+                          <span className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">Select Fields to Monitor</span>
+                          <button 
+                            onClick={() => setSelectedFields([])}
+                            className="text-[10px] text-rose-400 hover:text-rose-300 transition-colors"
+                          >
+                            Clear All
+                          </button>
+                        </div>
+                        <div className="flex flex-wrap gap-2 max-h-[200px] overflow-y-auto custom-scrollbar p-1">
+                          {allLatestFields.map(field => (
+                            <button
+                              key={field}
+                              onClick={() => setSelectedFields(prev => prev.includes(field) ? prev.filter(f => f !== field) : [...prev, field])}
+                              className={cn(
+                                "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-mono transition-all border",
+                                selectedFields.includes(field)
+                                  ? "bg-cyan-500/20 text-cyan-300 border-cyan-500/30"
+                                  : "bg-slate-800/50 text-slate-500 border-slate-700 hover:border-slate-600"
+                              )}
+                            >
+                              {selectedFields.includes(field) && <Check className="w-3 h-3" />}
+                              {field}
+                            </button>
+                          ))}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
+
                 <div className={cn(
                   "flex-1",
                   isFullScreen ? "overflow-y-auto scrollbar-hide" : "overflow-hidden"
                 )}>
                   <DiffViewer 
-                    oldValue={latestMessage.previousPayload || latestMessage.payload} 
-                    newValue={latestMessage.payload} 
+                    oldValue={filteredPreviousPayload || filteredLatestPayload} 
+                    newValue={filteredLatestPayload} 
                     viewMode={diffMode}
                     className={cn(
                       isFullScreen ? "min-h-full" : "h-full"
