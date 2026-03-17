@@ -97,15 +97,20 @@ export function DiffViewer({ oldValue, newValue, className, viewMode = 'inline',
 
   if (viewMode === 'latest') {
     return (
-      <div className={cn("relative group font-mono text-xs flex flex-col rounded-md bg-slate-900/50 border border-slate-700/50 overflow-hidden", className)}>
-        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-all z-10">
-          <button 
-            onClick={() => handleCopy(newValue)}
-            className="p-1.5 bg-slate-800/80 hover:bg-cyan-500/20 text-slate-400 hover:text-cyan-300 rounded-md border border-slate-700/50 backdrop-blur-sm shadow-lg"
-            title="Copy formatted JSON"
-          >
-            <Copy className="w-3.5 h-3.5" />
-          </button>
+      <div className={cn("relative group font-mono text-xs flex flex-col rounded-md bg-slate-900/50 border border-slate-700/50", !noScroll && "overflow-hidden", className)}>
+        <div className={cn(
+          "z-20 pointer-events-none flex justify-end pr-2",
+          noScroll ? "sticky top-2 h-0" : "absolute top-2 right-2 w-full"
+        )}>
+          <div className="pointer-events-auto opacity-0 group-hover:opacity-100 transition-all">
+            <button 
+              onClick={() => handleCopy(newValue)}
+              className="p-1.5 bg-slate-800/80 hover:bg-cyan-500/20 text-slate-400 hover:text-cyan-300 rounded-md border border-slate-700/50 backdrop-blur-sm shadow-lg"
+              title="Copy formatted JSON"
+            >
+              <Copy className="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
         <div className={cn(
           "flex-1 p-2 whitespace-pre-wrap",
@@ -143,8 +148,11 @@ export function DiffViewer({ oldValue, newValue, className, viewMode = 'inline',
     let newLineIdx = 0;
 
     return (
-      <div className={cn("relative group font-mono text-xs overflow-hidden rounded-md bg-slate-900/50 border border-slate-700/50 flex flex-col", className)}>
-        <div className="grid grid-cols-2 gap-4 text-xs text-slate-500 font-sans font-medium border-b border-slate-700/50 p-2 shrink-0 bg-slate-800/50">
+      <div className={cn("relative group font-mono text-xs rounded-md bg-slate-900/50 border border-slate-700/50 flex flex-col", !noScroll && "overflow-hidden", className)}>
+        <div className={cn(
+          "grid grid-cols-2 gap-4 text-xs text-slate-500 font-sans font-medium border-b border-slate-700/50 p-2 shrink-0 bg-slate-800/50",
+          noScroll && "sticky top-0 z-20"
+        )}>
           <div className="flex justify-between items-center px-2">
             <span>Previous</span>
             <button 
@@ -264,15 +272,20 @@ export function DiffViewer({ oldValue, newValue, className, viewMode = 'inline',
   let newLineIdx = 0;
 
   return (
-    <div className={cn("relative group font-mono text-xs flex flex-col rounded-md bg-slate-900/50 border border-slate-700/50 overflow-hidden", className)}>
-      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-all z-10">
-        <button 
-          onClick={() => handleCopy(newValue)}
-          className="p-1.5 bg-slate-800/80 hover:bg-cyan-500/20 text-slate-400 hover:text-cyan-300 rounded-md border border-slate-700/50 backdrop-blur-sm shadow-lg"
-          title="Copy formatted JSON"
-        >
-          <Copy className="w-3.5 h-3.5" />
-        </button>
+    <div className={cn("relative group font-mono text-xs flex flex-col rounded-md bg-slate-900/50 border border-slate-700/50", !noScroll && "overflow-hidden", className)}>
+      <div className={cn(
+        "z-20 pointer-events-none flex justify-end pr-2",
+        noScroll ? "sticky top-2 h-0" : "absolute top-2 right-2 w-full"
+      )}>
+        <div className="pointer-events-auto opacity-0 group-hover:opacity-100 transition-all">
+          <button 
+            onClick={() => handleCopy(newValue)}
+            className="p-1.5 bg-slate-800/80 hover:bg-cyan-500/20 text-slate-400 hover:text-cyan-300 rounded-md border border-slate-700/50 backdrop-blur-sm shadow-lg"
+            title="Copy formatted JSON"
+          >
+            <Copy className="w-3.5 h-3.5" />
+          </button>
+        </div>
       </div>
       <div className={cn(
         "flex-1 py-2",

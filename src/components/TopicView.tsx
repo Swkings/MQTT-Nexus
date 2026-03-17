@@ -19,6 +19,7 @@ export function TopicView({ topic, messages, onClear }: TopicViewProps) {
   const [showHistory, setShowHistory] = useState(false);
   const [diffMode, setDiffMode] = useState<'inline' | 'latest' | 'split'>('inline');
   const [timeFilter, setTimeFilter] = useState<'all' | '1m' | '5m' | '15m'>('all');
+  const [searchTime, setSearchTime] = useState('');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [activeChartPaths, setActiveChartPaths] = useState<string[]>([]);
   const [isFullScreen, setIsFullScreen] = useState(false);
@@ -42,7 +43,13 @@ export function TopicView({ topic, messages, onClear }: TopicViewProps) {
     if (timeFilter !== 'all') {
       const now = Date.now();
       const timeLimit = timeFilter === '1m' ? 60000 : timeFilter === '5m' ? 300000 : 900000;
-      filtered = filtered.filter(m => now - m.timestamp >= timeLimit);
+      filtered = filtered.filter(m => now - m.timestamp <= timeLimit);
+    }
+
+    if (searchTime) {
+      filtered = filtered.filter(m => 
+        new Date(m.timestamp).toLocaleTimeString().toLowerCase().includes(searchTime.toLowerCase())
+      );
     }
     
     // Default messages are descending (newest first).
@@ -228,7 +235,7 @@ export function TopicView({ topic, messages, onClear }: TopicViewProps) {
                 </div>
                 <div className={cn(
                   "flex-1",
-                  isFullScreen ? "overflow-y-auto" : "overflow-hidden"
+                  isFullScreen ? "overflow-y-auto scrollbar-hide" : "overflow-hidden"
                 )}>
                   <DiffViewer 
                     oldValue={latestMessage.previousPayload || latestMessage.payload} 
@@ -311,18 +318,30 @@ export function TopicView({ topic, messages, onClear }: TopicViewProps) {
                     <ArrowDownUp className="w-4 h-4" />
                   </button>
                 </div>
-                <div className="flex items-center gap-2 text-xs">
-                  <Filter className="w-3.5 h-3.5 text-slate-500" />
-                  <select
-                    value={timeFilter}
-                    onChange={(e) => setTimeFilter(e.target.value as any)}
-                    className="bg-slate-800 border border-slate-700 text-slate-300 rounded-md px-2 py-1 focus:outline-none focus:ring-1 focus:ring-purple-500 w-full"
-                  >
-                    <option value="all">All Time</option>
-                    <option value="1m">Last 1 Minute</option>
-                    <option value="5m">Last 5 Minutes</option>
-                    <option value="15m">Last 15 Minutes</option>
-                  </select>
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center gap-2 text-xs">
+                    <Filter className="w-3.5 h-3.5 text-slate-500" />
+                    <select
+                      value={timeFilter}
+                      onChange={(e) => setTimeFilter(e.target.value as any)}
+                      className="bg-slate-800 border border-slate-700 text-slate-300 rounded-md px-2 py-1 focus:outline-none focus:ring-1 focus:ring-purple-500 w-full"
+                    >
+                      <option value="all">All Time</option>
+                      <option value="1m">Last 1 Minute</option>
+                      <option value="5m">Last 5 Minutes</option>
+                      <option value="15m">Last 15 Minutes</option>
+                    </select>
+                  </div>
+                  <div className="relative">
+                    <Calendar className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500" />
+                    <input
+                      type="text"
+                      placeholder="Search time (e.g. 14:54)"
+                      value={searchTime}
+                      onChange={(e) => setSearchTime(e.target.value)}
+                      className="bg-slate-800 border border-slate-700 text-slate-300 rounded-md pl-8 pr-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-purple-500 w-full"
+                    />
+                  </div>
                 </div>
               </div>
               <div className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-3">

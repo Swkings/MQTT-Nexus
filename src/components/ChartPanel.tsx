@@ -69,7 +69,6 @@ export function ChartPanel({ data, path, onClose, compact = false }: ChartPanelP
                   fontSize={10} 
                   tickMargin={10}
                   minTickGap={compact ? 50 : 30}
-                  hide={compact}
                 />
                 <YAxis 
                   stroke="#64748b" 
@@ -102,7 +101,6 @@ export function ChartPanel({ data, path, onClose, compact = false }: ChartPanelP
                   fontSize={10} 
                   tickMargin={10}
                   minTickGap={compact ? 50 : 30}
-                  hide={compact}
                 />
                 <YAxis 
                   dataKey="value" 
