@@ -11,6 +11,7 @@ export interface BrokerConfig {
   clientId: string;
   username?: string;
   password?: string;
+  subscriptions?: string[];
 }
 
 export interface SavedHost {

@@ -52,7 +52,7 @@ export function DiffViewer({ oldValue, newValue, className, viewMode = 'inline' 
       try {
         return JSON.stringify(JSON.parse(newValue), null, 2);
       } catch {
-        return newValue;
+        return newValue || '';
       }
     }, [newValue]);
 
@@ -151,32 +151,71 @@ export function DiffViewer({ oldValue, newValue, className, viewMode = 'inline' 
   return (
     <div className={cn("relative group font-mono text-xs overflow-x-auto rounded-md bg-slate-900/50 border border-slate-700/50", className)}>
       <div className="py-2 min-w-max">
-        {diffs.map((part, index) => {
-          const lines = part.value.split('\n');
-          if (lines[lines.length - 1] === '') lines.pop();
-          
-          return lines.map((line, i) => {
-            const isAdded = part.added;
-            const isRemoved = part.removed;
+        {(() => {
+          const rows: React.ReactNode[] = [];
+          for (let i = 0; i < diffs.length; i++) {
+            const part = diffs[i];
+            const nextPart = diffs[i + 1];
             
-            return (
-              <div key={`${index}-${i}`} className={cn(
-                "flex px-2 py-0.5 hover:bg-slate-800/50 transition-colors",
-                isAdded ? "bg-emerald-500/20" :
-                isRemoved ? "bg-rose-500/20" : ""
-              )}>
-                <div className={cn(
-                  "w-6 shrink-0 select-none text-right pr-2 mr-2 border-r border-slate-700/50",
-                  isAdded ? "text-emerald-500" :
-                  isRemoved ? "text-rose-500" : "text-slate-600"
-                )}>
-                  {isAdded ? '+' : isRemoved ? '-' : ' '}
-                </div>
-                <div className="whitespace-pre flex-1" dangerouslySetInnerHTML={{ __html: syntaxHighlight(line) }} />
-              </div>
-            );
-          });
-        })}
+            // Check if we have a removed followed by an added (a change)
+            if (part.removed && nextPart && nextPart.added) {
+              const removedLines = part.value.split('\n');
+              if (removedLines[removedLines.length - 1] === '') removedLines.pop();
+              
+              const addedLines = nextPart.value.split('\n');
+              if (addedLines[addedLines.length - 1] === '') addedLines.pop();
+              
+              const maxLines = Math.max(removedLines.length, addedLines.length);
+              
+              for (let j = 0; j < maxLines; j++) {
+                if (j < removedLines.length) {
+                  rows.push(
+                    <div key={`removed-${i}-${j}`} className="flex px-2 py-0.5 bg-rose-500/20 transition-colors">
+                      <div className="w-6 shrink-0 select-none text-right pr-2 mr-2 border-r border-slate-700/50 text-rose-500">-</div>
+                      <div className="whitespace-pre flex-1" dangerouslySetInnerHTML={{ __html: syntaxHighlight(removedLines[j]) }} />
+                    </div>
+                  );
+                }
+                if (j < addedLines.length) {
+                  rows.push(
+                    <div key={`added-${i}-${j}`} className="flex px-2 py-0.5 bg-emerald-500/20 transition-colors">
+                      <div className="w-6 shrink-0 select-none text-right pr-2 mr-2 border-r border-slate-700/50 text-emerald-500">+</div>
+                      <div className="whitespace-pre flex-1" dangerouslySetInnerHTML={{ __html: syntaxHighlight(addedLines[j]) }} />
+                    </div>
+                  );
+                }
+              }
+              i++; // Skip the next part since we handled it
+            } else {
+              // Normal rendering for unchanged, or isolated added/removed
+              const lines = part.value.split('\n');
+              if (lines[lines.length - 1] === '') lines.pop();
+              
+              lines.forEach((line, j) => {
+                const isAdded = part.added;
+                const isRemoved = part.removed;
+                
+                rows.push(
+                  <div key={`${i}-${j}`} className={cn(
+                    "flex px-2 py-0.5 hover:bg-slate-800/50 transition-colors",
+                    isAdded ? "bg-emerald-500/20" :
+                    isRemoved ? "bg-rose-500/20" : ""
+                  )}>
+                    <div className={cn(
+                      "w-6 shrink-0 select-none text-right pr-2 mr-2 border-r border-slate-700/50",
+                      isAdded ? "text-emerald-500" :
+                      isRemoved ? "text-rose-500" : "text-slate-600"
+                    )}>
+                      {isAdded ? '+' : isRemoved ? '-' : ' '}
+                    </div>
+                    <div className="whitespace-pre flex-1" dangerouslySetInnerHTML={{ __html: syntaxHighlight(line) }} />
+                  </div>
+                );
+              });
+            }
+          }
+          return rows;
+        })()}
       </div>
       <button 
         onClick={() => handleCopy(newValue)}

@@ -29,6 +29,8 @@ export default function App() {
     clearMessages,
     messageLimit,
     setMessageLimit,
+    selectedTopic,
+    setSelectedTopic,
   } = useMqtt();
 
   const [brokers, setBrokers] = useState<BrokerConfig[]>(() => {
@@ -82,7 +84,6 @@ export default function App() {
   });
 
   const [activeBrokerId, setActiveBrokerId] = useState<string | null>(null);
-  const [selectedTopic, setSelectedTopic] = useState<string | null>(null);
   
   const [isLeftSidebarOpen, setIsLeftSidebarOpen] = useState(true);
   const [isTopicTreeOpen, setIsTopicTreeOpen] = useState(true);

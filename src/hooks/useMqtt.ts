@@ -20,6 +20,28 @@ export function useMqtt() {
   
   const [messageLimit, _setMessageLimit] = useState(20);
   const messageLimitRef = useRef(20);
+  
+  const [selectedTopic, _setSelectedTopic] = useState<string | null>(null);
+  const selectedTopicRef = useRef<string | null>(null);
+
+  const setSelectedTopic = useCallback((topic: string | null) => {
+    _setSelectedTopic(topic);
+    selectedTopicRef.current = topic;
+    
+    // When changing topics, enforce the limit on the previously selected topic
+    if (topic !== selectedTopicRef.current) {
+      setMessages(prev => {
+        const counts: Record<string, number> = {};
+        return prev.filter(m => {
+          // Don't filter the newly selected topic
+          if (m.topic === topic) return true;
+          
+          counts[m.topic] = (counts[m.topic] || 0) + 1;
+          return counts[m.topic] <= messageLimitRef.current;
+        });
+      });
+    }
+  }, []);
 
   const setMessageLimit = useCallback((limit: number) => {
     _setMessageLimit(limit);
@@ -27,6 +49,9 @@ export function useMqtt() {
     setMessages(prev => {
       const counts: Record<string, number> = {};
       return prev.filter(m => {
+        // Don't filter the currently selected topic
+        if (m.topic === selectedTopicRef.current) return true;
+        
         counts[m.topic] = (counts[m.topic] || 0) + 1;
         return counts[m.topic] <= limit;
       });
@@ -82,10 +107,13 @@ export function useMqtt() {
           lastMessagePerTopic.current[topic] = payloadString;
           
           let currentTopicCount = 0;
+          const isSelected = selectedTopicRef.current === topic;
+          const limit = isSelected ? Infinity : messageLimitRef.current;
+          
           const filteredPrev = prev.filter(m => {
             if (m.topic === topic) {
               currentTopicCount++;
-              return currentTopicCount < messageLimitRef.current;
+              return currentTopicCount < limit;
             }
             return true;
           });
@@ -160,5 +188,7 @@ export function useMqtt() {
     clearMessages,
     messageLimit,
     setMessageLimit,
+    selectedTopic,
+    setSelectedTopic,
   };
 }
