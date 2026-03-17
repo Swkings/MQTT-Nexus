@@ -19,12 +19,42 @@ export function TopicView({ topic, messages, onClear }: TopicViewProps) {
   const [pausedMessages, setPausedMessages] = useState<MqttMessage[]>([]);
   const [showHistory, setShowHistory] = useState(false);
   const [diffMode, setDiffMode] = useState<'inline' | 'latest' | 'split'>('inline');
-  const [timeFilter, setTimeFilter] = useState<'all' | '1m' | '5m' | '15m'>('all');
   const [searchTime, setSearchTime] = useState('');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [activeChartPaths, setActiveChartPaths] = useState<string[]>([]);
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [isCodeGenOpen, setIsCodeGenOpen] = useState(false);
+  const [historyWidth, setHistoryWidth] = useState(500);
+  const [isResizing, setIsResizing] = useState(false);
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    setIsResizing(true);
+    e.preventDefault();
+  };
+
+  React.useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isResizing) return;
+      const newWidth = window.innerWidth - e.clientX;
+      if (newWidth > 300 && newWidth < 800) {
+        setHistoryWidth(newWidth);
+      }
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+    };
+
+    if (isResizing) {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+    }
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isResizing]);
 
   const handlePauseToggle = () => {
     if (isPaused) {
@@ -42,12 +72,6 @@ export function TopicView({ topic, messages, onClear }: TopicViewProps) {
     if (!topic) return [];
     let filtered = displayMessages.filter(m => m.topic === topic);
     
-    if (timeFilter !== 'all') {
-      const now = Date.now();
-      const timeLimit = timeFilter === '1m' ? 60000 : timeFilter === '5m' ? 300000 : 900000;
-      filtered = filtered.filter(m => now - m.timestamp <= timeLimit);
-    }
-
     if (searchTime) {
       filtered = filtered.filter(m => 
         new Date(m.timestamp).toLocaleTimeString().toLowerCase().includes(searchTime.toLowerCase())
@@ -60,7 +84,7 @@ export function TopicView({ topic, messages, onClear }: TopicViewProps) {
     }
     
     return filtered;
-  }, [topic, displayMessages, timeFilter, sortOrder]);
+  }, [topic, displayMessages, searchTime, sortOrder]);
 
   const latestMessage = useMemo(() => {
     if (!topic) return null;
@@ -310,10 +334,19 @@ export function TopicView({ topic, messages, onClear }: TopicViewProps) {
           {showHistory && (
             <motion.div 
               initial={{ width: 0, opacity: 0 }}
-              animate={{ width: 400, opacity: 1 }}
+              animate={{ width: historyWidth, opacity: 1 }}
               exit={{ width: 0, opacity: 0 }}
-              className="border-l border-slate-700/50 flex flex-col bg-slate-900/20 shrink-0"
+              className="border-l border-slate-700/50 flex flex-col bg-slate-900/20 shrink-0 relative"
             >
+              {/* Resize Handle */}
+              <div
+                onMouseDown={handleMouseDown}
+                className={cn(
+                  "absolute left-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-cyan-500/50 transition-colors z-10",
+                  isResizing && "bg-cyan-500"
+                )}
+              />
+
               <div className="p-4 border-b border-slate-700/50 shrink-0">
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="text-sm font-medium text-slate-400 flex items-center gap-2">
@@ -329,19 +362,6 @@ export function TopicView({ topic, messages, onClear }: TopicViewProps) {
                   </button>
                 </div>
                 <div className="flex flex-col gap-2">
-                  <div className="flex items-center gap-2 text-xs">
-                    <Filter className="w-3.5 h-3.5 text-slate-500" />
-                    <select
-                      value={timeFilter}
-                      onChange={(e) => setTimeFilter(e.target.value as any)}
-                      className="bg-slate-800 border border-slate-700 text-slate-300 rounded-md px-2 py-1 focus:outline-none focus:ring-1 focus:ring-purple-500 w-full"
-                    >
-                      <option value="all">All Time</option>
-                      <option value="1m">Last 1 Minute</option>
-                      <option value="5m">Last 5 Minutes</option>
-                      <option value="15m">Last 15 Minutes</option>
-                    </select>
-                  </div>
                   <div className="relative">
                     <Calendar className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500" />
                     <input
@@ -362,7 +382,7 @@ export function TopicView({ topic, messages, onClear }: TopicViewProps) {
                 </AnimatePresence>
                 {topicMessages.length === 0 && (
                   <div className="text-center text-slate-500 py-8 text-sm">
-                    No messages found for the selected time range.
+                    No messages found for the selected time.
                   </div>
                 )}
               </div>
