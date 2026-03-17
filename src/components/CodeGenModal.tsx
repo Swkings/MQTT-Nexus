@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { X, Copy, Check, Code2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { generateCode, Language } from '../lib/codeGen';
 import { cn } from '../lib/utils';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 
 interface CodeGenModalProps {
   isOpen: boolean;
@@ -11,19 +13,21 @@ interface CodeGenModalProps {
   topicName: string;
 }
 
-const LANGUAGES: { id: Language; name: string; icon: string }[] = [
-  { id: 'go', name: 'Go', icon: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/go/go-original.svg' },
-  { id: 'python', name: 'Python', icon: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/python/python-original.svg' },
-  { id: 'typescript', name: 'TypeScript', icon: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/typescript/typescript-original.svg' },
-  { id: 'java', name: 'Java', icon: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/java/java-original.svg' },
-  { id: 'cpp', name: 'C++', icon: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/cplusplus/cplusplus-original.svg' },
+const LANGUAGES: { id: Language; name: string; icon: string; prism: string }[] = [
+  { id: 'go', name: 'Go', icon: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/go/go-original.svg', prism: 'go' },
+  { id: 'python', name: 'Python', icon: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/python/python-original.svg', prism: 'python' },
+  { id: 'typescript', name: 'TypeScript', icon: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/typescript/typescript-original.svg', prism: 'typescript' },
+  { id: 'java', name: 'Java', icon: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/java/java-original.svg', prism: 'java' },
+  { id: 'cpp', name: 'C++', icon: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/cplusplus/cplusplus-original.svg', prism: 'cpp' },
 ];
 
 export function CodeGenModal({ isOpen, onClose, json, topicName }: CodeGenModalProps) {
   const [selectedLang, setSelectedLang] = useState<Language>('go');
   const [copied, setCopied] = useState(false);
 
-  const generatedCode = React.useMemo(() => {
+  const currentLang = useMemo(() => LANGUAGES.find(l => l.id === selectedLang)!, [selectedLang]);
+
+  const generatedCode = useMemo(() => {
     if (!json) return '';
     // Clean up topic name for root struct name
     const rootName = topicName.split('/').pop()?.replace(/[^a-zA-Z0-9]/g, '') || 'Message';
@@ -105,10 +109,25 @@ export function CodeGenModal({ isOpen, onClose, json, topicName }: CodeGenModalP
                   {copied ? 'Copied!' : 'Copy Code'}
                 </button>
               </div>
-              <div className="flex-1 overflow-auto p-6 custom-scrollbar">
-                <pre className="font-mono text-sm text-slate-300 leading-relaxed">
-                  <code>{generatedCode}</code>
-                </pre>
+              <div className="flex-1 overflow-auto p-6 custom-scrollbar bg-slate-950">
+                <SyntaxHighlighter
+                  language={currentLang.prism}
+                  style={vscDarkPlus}
+                  customStyle={{
+                    background: 'transparent',
+                    padding: 0,
+                    margin: 0,
+                    fontSize: '0.875rem',
+                    lineHeight: '1.5',
+                  }}
+                  codeTagProps={{
+                    style: {
+                      fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
+                    }
+                  }}
+                >
+                  {generatedCode}
+                </SyntaxHighlighter>
               </div>
             </div>
           </div>

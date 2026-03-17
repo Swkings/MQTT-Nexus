@@ -22,6 +22,15 @@ interface ChartPanelProps {
 }
 
 export function ChartPanel({ data, path, onClose, compact = false }: ChartPanelProps) {
+  const [now, setNow] = React.useState(Date.now());
+
+  React.useEffect(() => {
+    const timer = setInterval(() => {
+      setNow(Date.now());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
   // Determine if data is mostly numeric or categorical
   const isNumeric = useMemo(() => {
     const numericCount = data.filter(d => typeof d.value === 'number' && !isNaN(d.value)).length;
@@ -41,6 +50,14 @@ export function ChartPanel({ data, path, onClose, compact = false }: ChartPanelP
     const uniqueValues = Array.from(new Set(chartData.map(d => String(d.value)))).filter(v => v !== 'null' && v !== 'undefined');
     return uniqueValues.sort();
   }, [chartData, isNumeric]);
+
+  const xDomain = useMemo(() => {
+    if (chartData.length === 0) return [now, now];
+    const min = chartData[0].timestamp;
+    // Use current time as max to keep the chart moving and show duration
+    const max = Math.max(now, chartData[chartData.length - 1].timestamp);
+    return [min, max];
+  }, [chartData, now]);
 
   return (
     <div className={cn(
@@ -71,11 +88,14 @@ export function ChartPanel({ data, path, onClose, compact = false }: ChartPanelP
               <LineChart data={chartData} margin={{ top: 5, right: 10, bottom: 5, left: -20 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
                 <XAxis 
-                  dataKey="time" 
+                  dataKey="timestamp" 
+                  type="number"
+                  domain={xDomain}
                   stroke="#64748b" 
                   fontSize={10} 
                   tickMargin={10}
                   minTickGap={compact ? 50 : 30}
+                  tickFormatter={(ts) => new Date(ts).toLocaleTimeString()}
                 />
                 <YAxis 
                   stroke="#64748b" 
@@ -103,11 +123,14 @@ export function ChartPanel({ data, path, onClose, compact = false }: ChartPanelP
               <ScatterChart margin={{ top: 5, right: 10, bottom: 5, left: -20 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
                 <XAxis 
-                  dataKey="time" 
+                  dataKey="timestamp" 
+                  type="number"
+                  domain={xDomain}
                   stroke="#64748b" 
                   fontSize={10} 
                   tickMargin={10}
                   minTickGap={compact ? 50 : 30}
+                  tickFormatter={(ts) => new Date(ts).toLocaleTimeString()}
                 />
                 <YAxis 
                   dataKey="value" 
