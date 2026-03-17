@@ -31,9 +31,16 @@ export function ChartPanel({ data, path, onClose, compact = false }: ChartPanelP
   const chartData = useMemo(() => {
     return data.map(d => ({
       ...d,
-      value: isNumeric ? (typeof d.value === 'number' ? d.value : parseFloat(d.value)) : d.value
+      value: isNumeric ? (typeof d.value === 'number' ? d.value : parseFloat(d.value)) : String(d.value)
     })).filter(d => isNumeric ? !isNaN(d.value) : true);
   }, [data, isNumeric]);
+
+  const categories = useMemo(() => {
+    if (isNumeric) return [];
+    // Get unique values and filter out empty/null
+    const uniqueValues = Array.from(new Set(chartData.map(d => String(d.value)))).filter(v => v !== 'null' && v !== 'undefined');
+    return uniqueValues.sort();
+  }, [chartData, isNumeric]);
 
   return (
     <div className={cn(
@@ -105,9 +112,11 @@ export function ChartPanel({ data, path, onClose, compact = false }: ChartPanelP
                 <YAxis 
                   dataKey="value" 
                   type="category" 
+                  domain={categories}
                   stroke="#64748b" 
                   fontSize={10}
-                  width={40}
+                  width={60}
+                  tickFormatter={(val) => String(val).length > 10 ? String(val).substring(0, 8) + '...' : val}
                 />
                 <ZAxis range={[50, 50]} />
                 <Tooltip 

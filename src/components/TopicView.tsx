@@ -3,7 +3,8 @@ import { MqttMessage } from '../hooks/useMqtt';
 import { DiffViewer } from './DiffViewer';
 import { MessageCard } from './MessageCard';
 import { ChartPanel } from './ChartPanel';
-import { Activity, SplitSquareHorizontal, Play, Pause, Trash2, History, Filter, LayoutTemplate, Columns, FileJson, ArrowDownUp, Calendar, Maximize2, Minimize2, X } from 'lucide-react';
+import { CodeGenModal } from './CodeGenModal';
+import { Activity, SplitSquareHorizontal, Play, Pause, Trash2, History, Filter, LayoutTemplate, Columns, FileJson, ArrowDownUp, Calendar, Maximize2, Minimize2, X, Code2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
 
@@ -23,6 +24,7 @@ export function TopicView({ topic, messages, onClear }: TopicViewProps) {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [activeChartPaths, setActiveChartPaths] = useState<string[]>([]);
   const [isFullScreen, setIsFullScreen] = useState(false);
+  const [isCodeGenOpen, setIsCodeGenOpen] = useState(false);
 
   const handlePauseToggle = () => {
     if (isPaused) {
@@ -126,6 +128,14 @@ export function TopicView({ topic, messages, onClear }: TopicViewProps) {
           </div>
           
           <div className="flex items-center gap-2 shrink-0 flex-wrap">
+            <button
+              onClick={() => setIsCodeGenOpen(true)}
+              className="p-2 bg-slate-700/50 text-slate-300 border border-slate-600 rounded-lg hover:bg-slate-700 transition-colors"
+              title="Generate Code Structure"
+            >
+              <Code2 className="w-4 h-4" />
+            </button>
+
             <button
               onClick={() => setIsFullScreen(!isFullScreen)}
               className="p-2 bg-slate-700/50 text-slate-300 border border-slate-600 rounded-lg hover:bg-slate-700 transition-colors"
@@ -360,6 +370,13 @@ export function TopicView({ topic, messages, onClear }: TopicViewProps) {
           )}
         </AnimatePresence>
       </div>
+
+      <CodeGenModal 
+        isOpen={isCodeGenOpen} 
+        onClose={() => setIsCodeGenOpen(false)} 
+        json={latestMessage ? JSON.parse(latestMessage.payload) : null}
+        topicName={topic}
+      />
     </div>
   );
 }
