@@ -16,6 +16,7 @@ export function useMqtt() {
   const [messages, setMessages] = useState<MqttMessage[]>([]);
   const [subscriptions, setSubscriptions] = useState<string[]>([]);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [messageCounts, setMessageCounts] = useState<Record<string, number>>({});
   
   const lastMessagePerTopic = useRef<Record<string, string>>({});
 
@@ -67,6 +68,11 @@ export function useMqtt() {
           
           return [newMessage, ...prev].slice(0, 500); // Keep last 500 messages
         });
+
+        setMessageCounts((prev) => ({
+          ...prev,
+          [topic]: (prev[topic] || 0) + 1
+        }));
       });
 
       setClient(mqttClient);
@@ -83,6 +89,7 @@ export function useMqtt() {
       setClient(null);
       setStatus('disconnected');
       setSubscriptions([]);
+      setMessageCounts({});
       lastMessagePerTopic.current = {};
     }
   }, [client]);
@@ -111,6 +118,7 @@ export function useMqtt() {
 
   const clearMessages = useCallback(() => {
     setMessages([]);
+    setMessageCounts({});
     lastMessagePerTopic.current = {};
   }, []);
 
@@ -119,6 +127,7 @@ export function useMqtt() {
     status,
     errorMsg,
     messages,
+    messageCounts,
     subscriptions,
     connect,
     disconnect,

@@ -20,6 +20,7 @@ export default function App() {
     status,
     errorMsg,
     messages,
+    messageCounts,
     subscriptions,
     connect,
     disconnect,
@@ -43,13 +44,14 @@ export default function App() {
                 protocol: u.protocol.replace(':', ''),
                 host: u.hostname,
                 port: parseInt(u.port) || (u.protocol === 'wss:' ? 443 : 80),
-                path: u.pathname || '/mqtt'
+                path: u.pathname || '/mqtt',
+                subscriptions: b.subscriptions || ['#']
               };
             } catch (e) {
-              return { ...b, protocol: 'ws', host: 'localhost', port: 8083, path: '/mqtt' };
+              return { ...b, protocol: 'ws', host: 'localhost', port: 8083, path: '/mqtt', subscriptions: ['#'] };
             }
           }
-          return b;
+          return { ...b, subscriptions: b.subscriptions || ['#'] };
         });
       } catch (e) {
         // Fallback if JSON parse fails
@@ -62,7 +64,8 @@ export default function App() {
       host: 'broker.emqx.io',
       port: 8083,
       path: '/mqtt',
-      clientId: `mqttjs_${Math.random().toString(16).substr(2, 8)}`
+      clientId: `mqttjs_${Math.random().toString(16).substr(2, 8)}`,
+      subscriptions: ['#']
     }];
   });
 
@@ -96,16 +99,49 @@ export default function App() {
     localStorage.setItem('mqtt_saved_credentials', JSON.stringify(savedCredentials));
   }, [savedCredentials]);
 
-  const { topics, messageCounts } = useMemo(() => {
-    const counts: Record<string, number> = {};
-    messages.forEach(m => {
-      counts[m.topic] = (counts[m.topic] || 0) + 1;
-    });
-    return {
-      topics: Object.keys(counts),
-      messageCounts: counts
-    };
-  }, [messages]);
+  const topics = useMemo(() => Object.keys(messageCounts), [messageCounts]);
+
+  // Subscribe to broker's saved subscriptions when connected
+  useEffect(() => {
+    if (status === 'connected' && activeBrokerId) {
+      const activeBroker = brokers.find(b => b.id === activeBrokerId);
+      if (activeBroker && activeBroker.subscriptions) {
+        activeBroker.subscriptions.forEach(sub => {
+          subscribe(sub, 2);
+        });
+      } else {
+        subscribe('#', 2);
+      }
+    }
+  }, [status, activeBrokerId]);
+
+  const handleSubscribe = (topic: string, qos: 0 | 1 | 2) => {
+    subscribe(topic, qos);
+    if (activeBrokerId) {
+      setBrokers(prev => prev.map(b => {
+        if (b.id === activeBrokerId) {
+          const subs = b.subscriptions || [];
+          if (!subs.includes(topic)) {
+            return { ...b, subscriptions: [...subs, topic] };
+          }
+        }
+        return b;
+      }));
+    }
+  };
+
+  const handleUnsubscribe = (topic: string) => {
+    unsubscribe(topic);
+    if (activeBrokerId) {
+      setBrokers(prev => prev.map(b => {
+        if (b.id === activeBrokerId) {
+          const subs = b.subscriptions || [];
+          return { ...b, subscriptions: subs.filter(t => t !== topic) };
+        }
+        return b;
+      }));
+    }
+  };
 
   const handleSaveBroker = (brokerData: BrokerConfig | Omit<BrokerConfig, 'id'>) => {
     if ('id' in brokerData && brokerData.id) {
@@ -234,7 +270,7 @@ export default function App() {
                 className="shrink-0 h-full overflow-hidden flex flex-col gap-6"
               >
                 <div className="w-[320px] h-full flex flex-col gap-6 overflow-y-auto custom-scrollbar pb-2">
-                  <div className="shrink-0 h-[300px]">
+                  <div className="flex-1 min-h-[400px]">
                     <BrokerSidebar
                       brokers={brokers}
                       activeBrokerId={activeBrokerId}
@@ -247,12 +283,12 @@ export default function App() {
                     />
                   </div>
                   
-                  <div className="flex-1 min-h-[300px]">
+                  <div className="shrink-0">
                     <SubscriptionPanel
                       status={status}
                       subscriptions={subscriptions}
-                      onSubscribe={subscribe}
-                      onUnsubscribe={unsubscribe}
+                      onSubscribe={handleSubscribe}
+                      onUnsubscribe={handleUnsubscribe}
                     />
                   </div>
                 </div>
