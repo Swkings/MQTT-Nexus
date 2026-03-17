@@ -213,6 +213,16 @@ export function BrokerModal({
                         placeholder="Alias (e.g. Prod Server)"
                         value={hostAlias}
                         onChange={e => setHostAlias(e.target.value)}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            if (hostAlias.trim() && host.trim()) {
+                              onSaveHost({ id: Math.random().toString(36).substr(2, 9), alias: hostAlias.trim(), host: host.trim() });
+                              setSavingHost(false);
+                              setHostAlias('');
+                            }
+                          }
+                        }}
                         className="flex-1 px-2 py-1.5 text-sm bg-slate-950/50 border border-slate-700 rounded focus:outline-none focus:border-cyan-500 text-slate-200"
                         autoFocus
                       />
@@ -324,6 +334,16 @@ export function BrokerModal({
                       placeholder="Alias (e.g. Prod Credentials)"
                       value={credAlias}
                       onChange={e => setCredAlias(e.target.value)}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          if (credAlias.trim() && (username.trim() || password)) {
+                            onSaveCredential({ id: Math.random().toString(36).substr(2, 9), alias: credAlias.trim(), username: username.trim(), password });
+                            setSavingCred(false);
+                            setCredAlias('');
+                          }
+                        }
+                      }}
                       className="flex-1 px-2 py-1.5 text-sm bg-slate-950/50 border border-slate-700 rounded focus:outline-none focus:border-cyan-500 text-slate-200"
                       autoFocus
                     />

@@ -12,12 +12,11 @@ interface SubscriptionPanelProps {
 
 export function SubscriptionPanel({ status, subscriptions, onSubscribe, onUnsubscribe }: SubscriptionPanelProps) {
   const [topic, setTopic] = useState('#');
-  const [qos, setQos] = useState<0 | 1 | 2>(0);
 
   const handleSubscribe = (e: React.FormEvent) => {
     e.preventDefault();
     if (topic.trim() && status === 'connected') {
-      onSubscribe(topic.trim(), qos);
+      onSubscribe(topic.trim(), 2);
       setTopic('');
     }
   };
@@ -50,17 +49,6 @@ export function SubscriptionPanel({ status, subscriptions, onSubscribe, onUnsubs
               required
             />
           </div>
-          
-          <select
-            value={qos}
-            onChange={(e) => setQos(Number(e.target.value) as 0 | 1 | 2)}
-            disabled={status !== 'connected'}
-            className="block w-20 pl-3 pr-8 py-2 border border-slate-700 rounded-lg leading-5 bg-slate-900/50 text-slate-300 focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500 sm:text-sm transition-colors disabled:opacity-50 appearance-none"
-          >
-            <option value={0}>QoS 0</option>
-            <option value={1}>QoS 1</option>
-            <option value={2}>QoS 2</option>
-          </select>
           
           <button
             type="submit"

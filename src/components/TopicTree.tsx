@@ -19,7 +19,7 @@ function buildTree(topics: string[], counts: Record<string, number>): TreeNode {
     let path = '';
 
     parts.forEach((part, index) => {
-      path = path ? `${path}/${part}` : part;
+      path = index === 0 ? part : `${path}/${part}`;
       if (!current.children[part]) {
         current.children[part] = {
           name: part,
@@ -49,7 +49,7 @@ const TreeNodeView = ({
   onSelectTopic: (t: string) => void, 
   level?: number 
 }) => {
-  const [expanded, setExpanded] = useState(true);
+  const [expanded, setExpanded] = useState(false);
   const hasChildren = Object.keys(node.children).length > 0;
   const isSelected = selectedTopic === node.fullPath;
 
@@ -90,7 +90,7 @@ const TreeNodeView = ({
         )}
         
         <span className={cn("text-sm truncate", isSelected ? "font-medium text-cyan-300" : "text-slate-300")}>
-          {node.name}
+          {node.name === '' ? (level === 0 ? '/' : '(empty)') : node.name}
         </span>
         
         {node.messageCount > 0 && (
