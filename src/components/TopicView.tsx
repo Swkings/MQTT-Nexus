@@ -500,6 +500,7 @@ export function TopicView({ topic, messages, onClear }: TopicViewProps) {
                         path={path} 
                         onClose={() => toggleChartPath(path)} 
                         compact
+                        isPaused={isPaused}
                       />
                     </div>
                   ))}
@@ -574,7 +575,13 @@ export function TopicView({ topic, messages, onClear }: TopicViewProps) {
       <CodeGenModal 
         isOpen={isCodeGenOpen} 
         onClose={() => setIsCodeGenOpen(false)} 
-        json={latestMessage ? JSON.parse(latestMessage.payload) : null}
+        json={latestMessage ? (() => {
+          try {
+            return JSON.parse(latestMessage.payload);
+          } catch {
+            return null;
+          }
+        })() : null}
         topicName={topic}
       />
     </div>

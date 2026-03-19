@@ -1,5 +1,5 @@
 import React from 'react';
-import { Server, Plus, Trash2, Plug, Unplug, AlertCircle, Edit2 } from 'lucide-react';
+import { Server, Plus, Trash2, Plug, Unplug, AlertCircle, Edit2, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { BrokerConfig } from '../types';
 import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
@@ -13,6 +13,8 @@ interface BrokerSidebarProps {
   onAdd: () => void;
   onEdit: (broker: BrokerConfig) => void;
   onDelete: (id: string) => void;
+  isCollapsed?: boolean;
+  onToggleCollapse?: () => void;
 }
 
 export function BrokerSidebar({
@@ -24,21 +26,37 @@ export function BrokerSidebar({
   onAdd,
   onEdit,
   onDelete,
+  isCollapsed = false,
+  onToggleCollapse,
 }: BrokerSidebarProps) {
   return (
-    <div className="bg-slate-800/50 backdrop-blur-xl border border-slate-700/50 rounded-2xl flex flex-col h-full overflow-hidden shadow-2xl shadow-black/50">
+    <div className={cn(
+      "bg-slate-800/50 backdrop-blur-xl border border-slate-700/50 rounded-2xl flex flex-col h-full overflow-hidden shadow-2xl shadow-black/50",
+      isCollapsed && "opacity-50"
+    )}>
       <div className="p-4 border-b border-slate-700/50 bg-slate-900/20 shrink-0 flex items-center justify-between">
         <h2 className="text-sm font-semibold text-slate-100 flex items-center gap-2">
           <Server className="w-4 h-4 text-cyan-400" />
           Brokers
         </h2>
-        <button
-          onClick={onAdd}
-          className="p-1.5 rounded-md text-slate-400 hover:text-cyan-400 hover:bg-cyan-500/10 transition-colors"
-          title="Add Broker"
-        >
-          <Plus className="w-4 h-4" />
-        </button>
+        <div className="flex items-center gap-1">
+          {onToggleCollapse && (
+            <button
+              onClick={onToggleCollapse}
+              className="p-1.5 rounded-md text-slate-400 hover:text-cyan-400 hover:bg-cyan-500/10 transition-colors"
+              title={isCollapsed ? "Expand Brokers" : "Collapse Brokers"}
+            >
+              {isCollapsed ? <PanelLeftOpen className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}
+            </button>
+          )}
+          <button
+            onClick={onAdd}
+            className="p-1.5 rounded-md text-slate-400 hover:text-cyan-400 hover:bg-cyan-500/10 transition-colors"
+            title="Add Broker"
+          >
+            <Plus className="w-4 h-4" />
+          </button>
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-2">

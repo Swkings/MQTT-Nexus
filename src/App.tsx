@@ -10,7 +10,7 @@ import { BrokerModal } from './components/BrokerModal';
 import { SubscriptionPanel } from './components/SubscriptionPanel';
 import { TopicTree } from './components/TopicTree';
 import { TopicView } from './components/TopicView';
-import { Activity, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Folder, FolderOpen } from 'lucide-react';
+import { Activity, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Folder, FolderOpen, Palette } from 'lucide-react';
 import { BrokerConfig, SavedHost, SavedCredential } from './types';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from './lib/utils';
@@ -89,6 +89,7 @@ export default function App() {
   const [isTopicTreeOpen, setIsTopicTreeOpen] = useState(true);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingBroker, setEditingBroker] = useState<BrokerConfig | null>(null);
+  const [isTransparentTheme, setIsTransparentTheme] = useState(false);
 
   useEffect(() => {
     localStorage.setItem('mqtt_brokers', JSON.stringify(brokers));
@@ -219,25 +220,30 @@ export default function App() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-300 font-sans selection:bg-cyan-500/30">
       {/* Background Effects */}
-      <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
+      <div className={cn(
+        "fixed inset-0 z-0 pointer-events-none overflow-hidden transition-opacity duration-300",
+        isTransparentTheme ? "opacity-30" : "opacity-100"
+      )}>
         <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-cyan-500/10 blur-[120px]" />
         <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-purple-500/10 blur-[120px]" />
       </div>
 
-      <div className="relative z-10 mx-auto p-4 sm:p-6 lg:p-8 min-h-screen lg:h-screen flex flex-col max-w-[1800px]">
+      <div className={cn(
+        "relative z-10 mx-auto p-4 sm:p-6 lg:p-8 min-h-screen lg:h-screen flex flex-col max-w-[1800px] transition-all duration-300",
+        isTransparentTheme 
+          ? "bg-transparent" 
+          : ""
+      )}>
         {/* Header */}
         <header className="flex-shrink-0 flex items-center justify-between mb-6 lg:mb-8">
           <div className="flex items-center gap-4">
-            <button
-              onClick={() => setIsLeftSidebarOpen(!isLeftSidebarOpen)}
-              className="p-2 rounded-xl bg-slate-800/50 hover:bg-slate-700/50 border border-slate-700/50 text-slate-400 hover:text-cyan-400 transition-colors"
-              title={isLeftSidebarOpen ? "Collapse Brokers" : "Expand Brokers"}
-            >
-              {isLeftSidebarOpen ? <PanelLeftClose className="w-5 h-5" /> : <PanelLeftOpen className="w-5 h-5" />}
-            </button>
-            
             <div className="flex items-center gap-3">
-              <div className="relative flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-purple-600 shadow-lg shadow-cyan-500/20">
+              <div className={cn(
+                "relative flex items-center justify-center w-10 h-10 rounded-xl shadow-lg",
+                isTransparentTheme 
+                  ? "bg-gradient-to-br from-cyan-500/80 to-purple-600/80 backdrop-blur-xl shadow-cyan-500/10" 
+                  : "bg-gradient-to-br from-cyan-500 to-purple-600 shadow-cyan-500/20"
+              )}>
                 <Activity className="w-6 h-6 text-white" />
               </div>
               <div>
@@ -248,16 +254,56 @@ export default function App() {
           </div>
 
           <div className="flex items-center gap-4">
+            {/* Theme Toggle */}
             <button
-              onClick={() => setIsTopicTreeOpen(!isTopicTreeOpen)}
-              className="p-2 rounded-xl bg-slate-800/50 hover:bg-slate-700/50 border border-slate-700/50 text-slate-400 hover:text-purple-400 transition-colors flex items-center gap-2"
-              title={isTopicTreeOpen ? "Collapse Topic Tree" : "Expand Topic Tree"}
+              onClick={() => setIsTransparentTheme(!isTransparentTheme)}
+              className={cn(
+                "p-2 rounded-xl border transition-colors flex items-center gap-2",
+                isTransparentTheme
+                  ? "bg-purple-500/20 border-purple-500/50 text-purple-400 hover:bg-purple-500/30"
+                  : "bg-slate-800/50 border-slate-700/50 text-slate-400 hover:text-purple-400 hover:bg-slate-700/50"
+              )}
+              title={isTransparentTheme ? "Disable Transparent Theme" : "Enable Transparent Theme"}
             >
-              <span className="text-xs font-medium hidden sm:inline">Topic Tree</span>
-              {isTopicTreeOpen ? <FolderOpen className="w-5 h-5" /> : <Folder className="w-5 h-5" />}
+              <Palette className="w-5 h-5" />
+              <span className="text-xs font-medium hidden sm:inline">
+                {isTransparentTheme ? "Transparent" : "Theme"}
+              </span>
             </button>
           </div>
         </header>
+
+        {/* Brokers Collapse Button - 悬浮显示在左侧 */}
+        <button
+          onClick={() => setIsLeftSidebarOpen(!isLeftSidebarOpen)}
+          className={cn(
+            "fixed left-0 top-1/2 -translate-y-1/2 z-50",
+            "p-2 rounded-r-xl rounded-l-none",
+            "bg-slate-800/80 backdrop-blur-sm border border-l-0 border-slate-700/50",
+            "text-slate-400 hover:text-cyan-400 hover:bg-slate-700/80",
+            "transition-all duration-200 shadow-lg",
+            isLeftSidebarOpen ? "opacity-0 hover:opacity-100" : "opacity-100"
+          )}
+          title={isLeftSidebarOpen ? "Collapse Brokers" : "Expand Brokers"}
+        >
+          {isLeftSidebarOpen ? <PanelLeftClose className="w-5 h-5" /> : <PanelLeftOpen className="w-5 h-5" />}
+        </button>
+
+        {/* Topic Tree Collapse Button - 悬浮显示在左侧，Brokers 按钮下方 */}
+        <button
+          onClick={() => setIsTopicTreeOpen(!isTopicTreeOpen)}
+          className={cn(
+            "fixed left-0 top-[calc(50%+60px)] -translate-y-1/2 z-50",
+            "p-2 rounded-r-xl rounded-l-none",
+            "bg-slate-800/80 backdrop-blur-sm border border-l-0 border-slate-700/50",
+            "text-slate-400 hover:text-purple-400 hover:bg-slate-700/80",
+            "transition-all duration-200 shadow-lg",
+            isTopicTreeOpen ? "opacity-0 hover:opacity-100" : "opacity-100"
+          )}
+          title={isTopicTreeOpen ? "Collapse Topic Tree" : "Expand Topic Tree"}
+        >
+          {isTopicTreeOpen ? <PanelRightClose className="w-5 h-5" /> : <PanelRightOpen className="w-5 h-5" />}
+        </button>
 
         {/* Main Layout */}
         <main className="flex-1 flex flex-col lg:flex-row min-h-0 pb-4 lg:pb-0 overflow-hidden">
@@ -283,6 +329,8 @@ export default function App() {
                       onAdd={openAddModal}
                       onEdit={openEditModal}
                       onDelete={handleDeleteBroker}
+                      isCollapsed={!isLeftSidebarOpen}
+                      onToggleCollapse={() => setIsLeftSidebarOpen(!isLeftSidebarOpen)}
                     />
                   </div>
                   
@@ -316,7 +364,9 @@ export default function App() {
                     topics={topics} 
                     messageCounts={messageCounts} 
                     selectedTopic={selectedTopic} 
-                    onSelectTopic={setSelectedTopic} 
+                    onSelectTopic={setSelectedTopic}
+                    isCollapsed={!isTopicTreeOpen}
+                    onToggleCollapse={() => setIsTopicTreeOpen(!isTopicTreeOpen)}
                   />
                 </div>
               </motion.div>

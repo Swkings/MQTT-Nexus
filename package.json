@@ -1,14 +1,26 @@
 {
-  "name": "react-example",
+  "name": "mqtt-nexus",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
+  "description": "MQTT Nexus - AI-Powered MQTT Desktop Client",
+  "author": {
+    "name": "MQTT Nexus Team",
+    "email": "support@mqtt-nexus.dev"
+  },
+  "main": "dist-electron/main.js",
   "type": "module",
   "scripts": {
-    "dev": "vite --port=3000 --host=0.0.0.0",
-    "build": "vite build",
+    "dev": "vite",
+    "build": "tsc && vite build",
     "preview": "vite preview",
-    "clean": "rm -rf dist",
-    "lint": "tsc --noEmit"
+    "clean": "rm -rf dist dist-electron release",
+    "lint": "tsc --noEmit",
+    "icons": "node scripts/generate-icons-from-css.js && node scripts/generate-icns-simple.js",
+    "electron:dev": "node scripts/start-electron-dev.js",
+    "electron:build": "npm run build && tsc -p electron/tsconfig.json && electron-builder",
+    "electron:build:win": "npm run electron:build -- -w",
+    "electron:build:mac": "npm run electron:build -- -m",
+    "electron:build:linux": "npm run electron:build -- -l"
   },
   "dependencies": {
     "@google/genai": "^1.29.0",
@@ -37,9 +49,18 @@
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "autoprefixer": "^10.4.21",
+    "canvas": "^3.2.1",
+    "concurrently": "^9.1.2",
+    "cross-env": "^7.0.3",
+    "electron": "^35.1.5",
+    "electron-builder": "^25.1.8",
+    "icns": "^0.1.0",
+    "png2icns": "^0.0.1",
+    "sharp": "^0.34.5",
     "tailwindcss": "^4.1.14",
     "tsx": "^4.21.0",
     "typescript": "~5.8.2",
-    "vite": "^6.2.0"
+    "vite": "^6.2.0",
+    "wait-on": "^8.0.3"
   }
 }

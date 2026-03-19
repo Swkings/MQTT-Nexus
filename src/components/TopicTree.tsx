@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { ChevronRight, ChevronDown, Folder, FolderOpen, Hash, Search } from 'lucide-react';
+import { ChevronRight, ChevronDown, Folder, FolderOpen, Hash, Search, PanelRightClose, PanelRightOpen } from 'lucide-react';
 import { cn } from '../lib/utils';
 
 interface TreeNode {
@@ -133,9 +133,18 @@ interface TopicTreeProps {
   messageCounts: Record<string, number>;
   selectedTopic: string | null;
   onSelectTopic: (topic: string) => void;
+  isCollapsed?: boolean;
+  onToggleCollapse?: () => void;
 }
 
-export function TopicTree({ topics, messageCounts, selectedTopic, onSelectTopic }: TopicTreeProps) {
+export function TopicTree({ 
+  topics, 
+  messageCounts, 
+  selectedTopic, 
+  onSelectTopic,
+  isCollapsed = false,
+  onToggleCollapse,
+}: TopicTreeProps) {
   const [searchQuery, setSearchQuery] = useState('');
 
   const filteredTopics = useMemo(() => {
@@ -147,12 +156,26 @@ export function TopicTree({ topics, messageCounts, selectedTopic, onSelectTopic 
   const tree = useMemo(() => buildTree(filteredTopics, messageCounts), [filteredTopics, messageCounts]);
 
   return (
-    <div className="bg-slate-800/50 backdrop-blur-xl border border-slate-700/50 rounded-2xl flex flex-col h-full overflow-hidden shadow-2xl shadow-black/50">
+    <div className={cn(
+      "bg-slate-800/50 backdrop-blur-xl border border-slate-700/50 rounded-2xl flex flex-col h-full overflow-hidden shadow-2xl shadow-black/50",
+      isCollapsed && "opacity-50"
+    )}>
       <div className="p-4 border-b border-slate-700/50 bg-slate-900/20 shrink-0 space-y-3">
-        <h2 className="text-sm font-semibold text-slate-100 flex items-center gap-2">
-          <Folder className="w-4 h-4 text-purple-400" />
-          Topic Tree
-        </h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-slate-100 flex items-center gap-2">
+            <Folder className="w-4 h-4 text-purple-400" />
+            Topic Tree
+          </h2>
+          {onToggleCollapse && (
+            <button
+              onClick={onToggleCollapse}
+              className="p-1.5 rounded-md text-slate-400 hover:text-purple-400 hover:bg-purple-500/10 transition-colors"
+              title={isCollapsed ? "Expand Topic Tree" : "Collapse Topic Tree"}
+            >
+              {isCollapsed ? <PanelRightOpen className="w-4 h-4" /> : <PanelRightClose className="w-4 h-4" />}
+            </button>
+          )}
+        </div>
         <div className="relative">
           <div className="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none">
             <Search className="h-3.5 w-3.5 text-slate-500" />

@@ -19,17 +19,34 @@ interface ChartPanelProps {
   path: string;
   onClose: () => void;
   compact?: boolean;
+  isPaused?: boolean;
 }
 
-export function ChartPanel({ data, path, onClose, compact = false }: ChartPanelProps) {
+export function ChartPanel({ data, path, onClose, compact = false, isPaused = false }: ChartPanelProps) {
   const [now, setNow] = React.useState(Date.now());
+  const [frozenNow, setFrozenNow] = React.useState<number | null>(null);
 
+  // Update 'now' every second, but freeze if paused
   React.useEffect(() => {
     const timer = setInterval(() => {
-      setNow(Date.now());
+      if (!isPaused) {
+        setNow(Date.now());
+      }
     }, 1000);
     return () => clearInterval(timer);
-  }, []);
+  }, [isPaused]);
+
+  // Freeze or unfreeze the chart when pause state changes
+  React.useEffect(() => {
+    if (isPaused) {
+      setFrozenNow(now);
+    } else {
+      setFrozenNow(null);
+    }
+  }, [isPaused, now]);
+
+  // Use frozen time if paused, otherwise use current time
+  const displayNow = isPaused && frozenNow !== null ? frozenNow : now;
 
   // Determine if data is mostly numeric or categorical
   const isNumeric = useMemo(() => {
@@ -51,13 +68,40 @@ export function ChartPanel({ data, path, onClose, compact = false }: ChartPanelP
     return uniqueValues.sort();
   }, [chartData, isNumeric]);
 
+  // For string values, create a map to numeric indices for proper Y-axis positioning
+  const categoryIndexMap = useMemo(() => {
+    if (isNumeric) return {};
+    const map: Record<string, number> = {};
+    categories.forEach((cat, idx) => {
+      map[cat] = idx;
+    });
+    return map;
+  }, [categories, isNumeric]);
+
+  // Convert chartData for scatter plot with numeric Y values
+  const scatterData = useMemo(() => {
+    if (isNumeric) return chartData;
+    return chartData.map(d => ({
+      ...d,
+      yIndex: categoryIndexMap[String(d.value)] ?? 0,
+      displayValue: String(d.value)
+    }));
+  }, [chartData, isNumeric, categoryIndexMap]);
+
   const xDomain = useMemo(() => {
-    if (chartData.length === 0) return [now, now];
+    if (chartData.length === 0) return [displayNow, displayNow];
     const min = chartData[0].timestamp;
     // Use current time as max to keep the chart moving and show duration
-    const max = Math.max(now, chartData[chartData.length - 1].timestamp);
+    const max = Math.max(displayNow, chartData[chartData.length - 1].timestamp);
     return [min, max];
-  }, [chartData, now]);
+  }, [chartData, displayNow]);
+
+  // Y-axis domain for scatter plot (numeric indices)
+  const yDomain = useMemo(() => {
+    if (isNumeric) return ['auto', 'auto'];
+    if (categories.length === 0) return [0, 1];
+    return [0, categories.length - 1];
+  }, [isNumeric, categories.length]);
 
   return (
     <div className={cn(
@@ -133,13 +177,16 @@ export function ChartPanel({ data, path, onClose, compact = false }: ChartPanelP
                   tickFormatter={(ts) => new Date(ts).toLocaleTimeString()}
                 />
                 <YAxis 
-                  dataKey="value" 
-                  type="category" 
-                  domain={categories}
+                  dataKey="yIndex" 
+                  type="number"
+                  domain={yDomain}
                   stroke="#64748b" 
                   fontSize={10}
-                  width={60}
-                  tickFormatter={(val) => String(val).length > 10 ? String(val).substring(0, 8) + '...' : val}
+                  width={80}
+                  tickFormatter={(idx) => {
+                    const cat = categories[Math.round(idx)];
+                    return cat && cat.length > 10 ? cat.substring(0, 8) + '...' : cat;
+                  }}
                 />
                 <ZAxis range={[50, 50]} />
                 <Tooltip 
@@ -147,8 +194,20 @@ export function ChartPanel({ data, path, onClose, compact = false }: ChartPanelP
                   contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '0.375rem', fontSize: '12px' }}
                   itemStyle={{ color: '#22d3ee' }}
                   labelStyle={{ color: '#94a3b8', marginBottom: '4px' }}
+                  formatter={(val: any, name: string) => {
+                    if (name === 'yIndex') {
+                      return [categories[val], 'Value'];
+                    }
+                    return [val, name];
+                  }}
                 />
-                <Scatter data={chartData} fill="#22d3ee" isAnimationActive={false} />
+                <Scatter 
+                  data={scatterData} 
+                  fill="#22d3ee" 
+                  isAnimationActive={false}
+                  line={{ stroke: '#22d3ee', strokeWidth: 1 }}
+                  shape="circle"
+                />
               </ScatterChart>
             )}
           </ResponsiveContainer>

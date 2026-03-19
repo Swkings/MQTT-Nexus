@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { format } from 'date-fns';
-import { ChevronDown, ChevronUp, FileJson, FileText, Activity, Clock, Copy, Filter, Check, Hash } from 'lucide-react';
+import { ChevronDown, ChevronUp, FileJson, FileText, Activity, Clock, Copy, Filter, Check, Hash, Code } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { MqttMessage } from '../hooks/useMqtt';
 import { DiffViewer, syntaxHighlight } from './DiffViewer';
@@ -34,14 +34,36 @@ export function MessageCard({ message, showDiffByDefault = false }: MessageCardP
   const [showSelectedOnly, setShowSelectedOnly] = useState(false);
   const [showFieldPicker, setShowFieldPicker] = useState(false);
 
-  const isJson = useMemo(() => {
+  // 检测数据类型
+  const dataType = useMemo(() => {
+    const payload = message.payload.trim();
+    
+    // 尝试 JSON
     try {
-      JSON.parse(message.payload);
-      return true;
+      JSON.parse(payload);
+      return 'json';
     } catch {
-      return false;
+      // 不是 JSON
     }
+    
+    // 尝试 XML
+    if (payload.startsWith('<?xml') || (payload.startsWith('<') && payload.endsWith('>'))) {
+      return 'xml';
+    }
+    
+    // 尝试 HTML
+    if (payload.startsWith('<!DOCTYPE html') || payload.startsWith('<html')) {
+      return 'html';
+    }
+    
+    // 纯文本
+    return 'text';
   }, [message.payload]);
+
+  const isJson = dataType === 'json';
+  const isXml = dataType === 'xml';
+  const isHtml = dataType === 'html';
+  const isText = dataType === 'text';
 
   const parsedPayload = useMemo(() => {
     if (!isJson) return null;
@@ -73,14 +95,21 @@ export function MessageCard({ message, showDiffByDefault = false }: MessageCardP
   }, [parsedPayload, selectedFields, showSelectedOnly]);
 
   const formattedPayload = useMemo(() => {
-    if (!isJson) return message.payload;
-    try {
-      const data = showSelectedOnly ? filteredPayload : parsedPayload;
-      return JSON.stringify(data, null, 2);
-    } catch {
+    if (isJson) {
+      try {
+        const data = showSelectedOnly ? filteredPayload : parsedPayload;
+        return JSON.stringify(data, null, 2);
+      } catch {
+        return message.payload;
+      }
+    }
+    // XML 和 HTML 保持原样，但可以进行简单的格式化
+    if (isXml || isHtml) {
       return message.payload;
     }
-  }, [message.payload, isJson, parsedPayload, filteredPayload, showSelectedOnly]);
+    // 纯文本
+    return message.payload;
+  }, [message.payload, isJson, isXml, isHtml, parsedPayload, filteredPayload, showSelectedOnly]);
 
   const handleCopy = (text: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
@@ -110,6 +139,19 @@ export function MessageCard({ message, showDiffByDefault = false }: MessageCardP
             <div className="flex-shrink-0 w-2 h-2 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.8)]" />
             <span className="font-mono text-sm font-semibold text-slate-200 truncate max-w-[200px] sm:max-w-xs md:max-w-md">
               {message.topic}
+            </span>
+            {/* 数据类型标签 */}
+            <span className={cn(
+              "px-2 py-0.5 rounded text-xs font-medium shrink-0",
+              isJson && "bg-blue-500/20 text-blue-400 border border-blue-500/30",
+              isXml && "bg-orange-500/20 text-orange-400 border border-orange-500/30",
+              isHtml && "bg-red-500/20 text-red-400 border border-red-500/30",
+              isText && "bg-slate-500/20 text-slate-400 border border-slate-500/30"
+            )}>
+              {isJson && 'JSON'}
+              {isXml && 'XML'}
+              {isHtml && 'HTML'}
+              {isText && 'TEXT'}
             </span>
           </div>
           <div className="flex items-center gap-3">
@@ -175,8 +217,11 @@ export function MessageCard({ message, showDiffByDefault = false }: MessageCardP
                       : "bg-slate-800 text-slate-400 border border-slate-700 hover:bg-slate-700"
                   )}
                 >
-                  <FileJson className="w-3.5 h-3.5" />
-                  {isJson ? 'Formatted JSON' : 'Formatted'}
+                  {isJson && <FileJson className="w-3.5 h-3.5" />}
+                  {isXml && <Code className="w-3.5 h-3.5" />}
+                  {isHtml && <Code className="w-3.5 h-3.5" />}
+                  {isText && <FileText className="w-3.5 h-3.5" />}
+                  {isJson ? 'JSON' : isXml ? 'XML' : isHtml ? 'HTML' : 'Text'}
                 </button>
                 <button
                   onClick={(e) => { e.stopPropagation(); setViewMode('raw'); }}
@@ -281,6 +326,10 @@ export function MessageCard({ message, showDiffByDefault = false }: MessageCardP
                   <pre className="font-mono text-xs text-slate-300 whitespace-pre-wrap overflow-x-auto p-4 rounded-md bg-slate-900/80 border border-slate-700/50 shadow-inner max-h-[400px] overflow-y-auto custom-scrollbar">
                     {viewMode === 'formatted' && isJson ? (
                       <code dangerouslySetInnerHTML={{ __html: syntaxHighlight(formattedPayload) }} />
+                    ) : viewMode === 'formatted' && isXml ? (
+                      <code className="text-orange-300">{formattedPayload}</code>
+                    ) : viewMode === 'formatted' && isHtml ? (
+                      <code className="text-red-300">{formattedPayload}</code>
                     ) : (
                       <code>{viewMode === 'formatted' ? formattedPayload : message.payload}</code>
                     )}
