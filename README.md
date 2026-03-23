@@ -1,7 +1,3 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
-
 # MQTT Nexus - AI-Powered MQTT Desktop Client 🚀
 
 <div align="center">
@@ -48,10 +44,56 @@
 - Node.js >= 18.x
 - npm >= 9.x
 
-### Installation
+### One-Click Installation
+
+####  Online Installation (Recommended)
+
+Install directly without cloning the repository:
+
+**Linux/macOS:**
+```bash
+# Install from main branch
+curl -fsSL https://raw.githubusercontent.com/your-org/MQTT-Nexus/main/install-online.sh | bash
+
+# Or using wget
+wget -qO- https://raw.githubusercontent.com/your-org/MQTT-Nexus/main/install-online.sh | bash
+```
+
+**Windows (PowerShell):**
+```powershell
+# Install from main branch
+powershell -Command "iwr -UseBasicParsing https://raw.githubusercontent.com/your-org/MQTT-Nexus/main/install-online.bat | iex"
+```
+
+#### 📦 Clone and Install
+
+**Linux/macOS:**
+```bash
+# Clone the repository
+git clone https://github.com/your-org/MQTT-Nexus.git
+cd MQTT-Nexus
+
+# Run the installation script
+chmod +x install.sh
+./install.sh
+
+# Options:
+# ./install.sh --skip-build    # Only install dependencies
+# ./install.sh --electron      # Build Electron desktop app
+```
+
+**Windows:**
+```bash
+```
+
+#### Manual Installation
 
 ```bash
+# Install dependencies
 npm install
+
+# Build the application
+npm run build
 ```
 
 ### Development
@@ -81,6 +123,8 @@ Then visit http://localhost:3000
 Create a `.env.local` file with your Gemini API key:
 
 ```
+VITE_APP_DEFAULT_PORT=3001
+VITE_APP_DEFAULT_MQTT_PORT=1883
 GEMINI_API_KEY=your_api_key_here
 ```
 
