@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { MqttMessage } from '../hooks/useMqtt';
 import { DiffViewer, syntaxHighlight } from './DiffViewer';
 import { cn } from '../lib/utils';
+import { useTheme } from '../contexts/ThemeContext';
 
 function getAllPaths(obj: any, prefix = ''): string[] {
   let paths: string[] = [];
@@ -28,6 +29,7 @@ interface MessageCardProps {
 }
 
 export function MessageCard({ message, showDiffByDefault = false }: MessageCardProps) {
+  const { theme, themeClasses } = useTheme();
   const [expanded, setExpanded] = useState(false);
   const [viewMode, setViewMode] = useState<'raw' | 'formatted' | 'diff'>('formatted');
   const [selectedFields, setSelectedFields] = useState<string[]>([]);
@@ -127,26 +129,37 @@ export function MessageCard({ message, showDiffByDefault = false }: MessageCardP
       initial={{ opacity: 0, y: -10 }}
       animate={{ opacity: 1, y: 0 }}
       layout
-      className="group bg-slate-800/80 backdrop-blur-md border border-slate-700/50 rounded-xl overflow-hidden shadow-sm hover:shadow-cyan-500/10 transition-all duration-300"
+      className={cn(
+        "backdrop-blur-xl border rounded-2xl p-4 transition-all duration-300 cursor-pointer group/message",
+        themeClasses.cardBg,
+        themeClasses.border,
+        themeClasses.shadow,
+        themeClasses.text,
+        "hover:shadow-2xl hover:border-opacity-50",
+        theme.mode === 'light' ? "hover:bg-slate-200/50" : "hover:bg-slate-800/50"
+      )}
     >
       {/* Header */}
       <div 
-        className="px-4 py-3 flex flex-col gap-2 cursor-pointer hover:bg-slate-700/30 transition-colors"
+        className={cn(
+          "px-4 py-3 flex flex-col gap-2 cursor-pointer transition-colors",
+          theme.mode === 'light' ? "hover:bg-slate-200/50" : "hover:bg-slate-800/50"
+        )}
         onClick={() => setExpanded(!expanded)}
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3 overflow-hidden">
-            <div className="flex-shrink-0 w-2 h-2 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.8)]" />
-            <span className="font-mono text-sm font-semibold text-slate-200 truncate max-w-[200px] sm:max-w-xs md:max-w-md">
+            <div className={cn("flex-shrink-0 w-2 h-2 rounded-full shadow-[0_0_8px_rgba(34,211,238,0.8)]", theme.mode === 'light' ? "bg-cyan-600" : "bg-cyan-400")} />
+            <span className={cn("font-mono text-sm font-semibold truncate max-w-[200px] sm:max-w-xs md:max-w-md", themeClasses.textPrimary)}>
               {message.topic}
             </span>
             {/* 数据类型标签 */}
             <span className={cn(
               "px-2 py-0.5 rounded text-xs font-medium shrink-0",
-              isJson && "bg-blue-500/20 text-blue-400 border border-blue-500/30",
-              isXml && "bg-orange-500/20 text-orange-400 border border-orange-500/30",
-              isHtml && "bg-red-500/20 text-red-400 border border-red-500/30",
-              isText && "bg-slate-500/20 text-slate-400 border border-slate-500/30"
+              isJson && (theme.mode === 'light' ? "bg-blue-100 text-blue-700 border border-blue-300" : "bg-blue-500/20 text-blue-400 border border-blue-500/30"),
+              isXml && (theme.mode === 'light' ? "bg-orange-100 text-orange-700 border border-orange-300" : "bg-orange-500/20 text-orange-400 border border-orange-500/30"),
+              isHtml && (theme.mode === 'light' ? "bg-red-100 text-red-700 border border-red-300" : "bg-red-500/20 text-red-400 border border-red-500/30"),
+              isText && (theme.mode === 'light' ? "bg-slate-200 text-slate-700 border border-slate-300" : "bg-slate-500/20 text-slate-400 border border-slate-500/30")
             )}>
               {isJson && 'JSON'}
               {isXml && 'XML'}
@@ -155,41 +168,46 @@ export function MessageCard({ message, showDiffByDefault = false }: MessageCardP
             </span>
           </div>
           <div className="flex items-center gap-3">
-            <div className="text-xs text-slate-400 font-mono truncate max-w-[100px] sm:max-w-[200px]">
+            <div className={cn("text-xs font-mono truncate max-w-[100px] sm:max-w-[200px]", themeClasses.textSecondary)}>
               {!expanded && (isJson ? '{...}' : message.payload.substring(0, 30) + (message.payload.length > 30 ? '...' : ''))}
             </div>
-            <button className="text-slate-400 hover:text-cyan-400 transition-colors p-1 rounded-md hover:bg-slate-700/50">
+            <button className={cn("transition-colors p-1 rounded-md", themeClasses.textSecondary, theme.mode === 'light' ? "hover:text-cyan-600 hover:bg-slate-200" : "hover:text-cyan-400 hover:bg-slate-700/50")}>
               {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
             </button>
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 text-[10px] sm:text-xs text-slate-500 font-mono">
-          <span className="flex items-center gap-1 bg-slate-900/50 px-2 py-0.5 rounded-md border border-slate-700/50">
+        <div className={cn("flex flex-wrap items-center gap-2 text-[10px] sm:text-xs font-mono", themeClasses.textSecondary)}>
+          <span className={cn("flex items-center gap-1 px-2 py-0.5 rounded-md border", themeClasses.border, theme.mode === 'light' ? "bg-slate-200 text-slate-700" : "bg-slate-900/50 text-slate-300")}>
             <Activity className="w-3 h-3 text-cyan-500" /> QoS {message.qos}
           </span>
           
-          <div className="flex items-center gap-1 bg-slate-900/50 px-2 py-0.5 rounded-md border border-slate-700/50 group/time">
-            <Clock className="w-3 h-3 text-purple-400" />
-            <span>{format(message.timestamp, 'yyyy-MM-dd HH:mm:ss.SSS')}</span>
+          <div className={cn("flex items-center gap-1 px-2 py-0.5 rounded-md border group/time", themeClasses.border, theme.mode === 'light' ? "bg-slate-200 text-slate-700" : "bg-slate-900/50 text-slate-300")}>
+            <Clock className={cn("w-3 h-3", theme.mode === 'light' ? "text-purple-600" : "text-purple-400")} />
+            <span className="font-mono text-xs">{format(message.timestamp, 'HH:mm:ss')}</span>
             <button 
-              onClick={(e) => handleCopy(format(message.timestamp, 'yyyy-MM-dd HH:mm:ss.SSS'), e)}
-              className="ml-1 p-0.5 hover:text-cyan-400 transition-colors"
+              onClick={(e) => {
+                e.stopPropagation();
+                navigator.clipboard.writeText(format(message.timestamp, 'yyyy-MM-dd HH:mm:ss.SSS'));
+              }}
+              className={cn("opacity-0 group-hover/time:opacity-100 p-0.5 rounded transition-all", theme.mode === 'light' ? "hover:bg-slate-300 hover:text-cyan-600" : "hover:bg-slate-700 hover:text-cyan-400")}
               title="Copy formatted time"
             >
-              <Copy className="w-2.5 h-2.5" />
+              <Copy className="w-3 h-3" />
             </button>
           </div>
-
-          <div className="flex items-center gap-1 bg-slate-900/50 px-2 py-0.5 rounded-md border border-slate-700/50 group/ts">
-            <Hash className="w-3 h-3 text-emerald-400" />
-            <span>{message.timestamp}</span>
+          <div className={cn("flex items-center gap-1 px-2 py-0.5 rounded-md border group/ts", themeClasses.border, theme.mode === 'light' ? "bg-slate-200 text-slate-700" : "bg-slate-900/50 text-slate-300")}>
+            <Hash className={cn("w-3 h-3", theme.mode === 'light' ? "text-emerald-600" : "text-emerald-400")} />
+            <span className="font-mono text-xs">{message.timestamp}</span>
             <button 
-              onClick={(e) => handleCopy(message.timestamp.toString(), e)}
-              className="ml-1 p-0.5 hover:text-cyan-400 transition-colors"
+              onClick={(e) => {
+                e.stopPropagation();
+                navigator.clipboard.writeText(message.timestamp.toString());
+              }}
+              className={cn("opacity-0 group-hover/ts:opacity-100 p-0.5 rounded transition-all", theme.mode === 'light' ? "hover:bg-slate-300 hover:text-cyan-600" : "hover:bg-slate-700 hover:text-cyan-400")}
               title="Copy timestamp"
             >
-              <Copy className="w-2.5 h-2.5" />
+              <Copy className="w-3 h-3" />
             </button>
           </div>
         </div>
@@ -203,80 +221,67 @@ export function MessageCard({ message, showDiffByDefault = false }: MessageCardP
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="border-t border-slate-700/50"
+            className={cn("border-t", theme.mode === 'light' ? "border-slate-300" : "border-slate-700/50")}
           >
-            <div className="p-4 bg-slate-900/30">
+            <div className={cn("p-4", theme.mode === 'light' ? "bg-slate-100/50" : "bg-slate-900/30")}>
               {/* Toolbar */}
               <div className="flex flex-wrap items-center gap-2 mb-3">
                 <button
                   onClick={(e) => { e.stopPropagation(); setViewMode('formatted'); }}
                   className={cn(
-                    "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all",
-                    viewMode === 'formatted' 
-                      ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/30" 
-                      : "bg-slate-800 text-slate-400 border border-slate-700 hover:bg-slate-700"
+                    "px-3 py-1.5 rounded-lg text-xs font-medium transition-all border",
+                    viewMode === 'formatted'
+                      ? "bg-cyan-500/20 text-cyan-400 border-cyan-500/30"
+                      : theme.mode === 'light' ? "bg-slate-200 text-slate-700 border border-slate-300 hover:bg-slate-300" : "bg-slate-800 text-slate-400 border border-slate-700 hover:bg-slate-700"
                   )}
                 >
-                  {isJson && <FileJson className="w-3.5 h-3.5" />}
-                  {isXml && <Code className="w-3.5 h-3.5" />}
-                  {isHtml && <Code className="w-3.5 h-3.5" />}
-                  {isText && <FileText className="w-3.5 h-3.5" />}
-                  {isJson ? 'JSON' : isXml ? 'XML' : isHtml ? 'HTML' : 'Text'}
+                  Formatted
                 </button>
                 <button
                   onClick={(e) => { e.stopPropagation(); setViewMode('raw'); }}
                   className={cn(
-                    "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all",
-                    viewMode === 'raw' 
-                      ? "bg-purple-500/20 text-purple-300 border border-purple-500/30" 
-                      : "bg-slate-800 text-slate-400 border border-slate-700 hover:bg-slate-700"
+                    "px-3 py-1.5 rounded-lg text-xs font-medium transition-all border",
+                    viewMode === 'raw'
+                      ? "bg-cyan-500/20 text-cyan-400 border-cyan-500/30"
+                      : theme.mode === 'light' ? "bg-slate-200 text-slate-700 border border-slate-300 hover:bg-slate-300" : "bg-slate-800 text-slate-400 border border-slate-700 hover:bg-slate-700"
                   )}
                 >
-                  <FileText className="w-3.5 h-3.5" />
                   Raw
                 </button>
                 {message.previousPayload && (
                   <button
                     onClick={(e) => { e.stopPropagation(); setViewMode('diff'); }}
                     className={cn(
-                      "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all",
-                      viewMode === 'diff' 
-                        ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30" 
-                        : "bg-slate-800 text-slate-400 border border-slate-700 hover:bg-slate-700"
+                      "px-3 py-1.5 rounded-lg text-xs font-medium transition-all border",
+                      viewMode === 'diff'
+                        ? "bg-cyan-500/20 text-cyan-400 border-cyan-500/30"
+                        : theme.mode === 'light' ? "bg-slate-200 text-slate-700 border border-slate-300 hover:bg-slate-300" : "bg-slate-800 text-slate-400 border border-slate-700 hover:bg-slate-700"
                     )}
                   >
-                    <Activity className="w-3.5 h-3.5" />
                     Diff
                   </button>
                 )}
 
-                <div className="h-4 w-px bg-slate-700 mx-1 hidden sm:block"></div>
-
-                {isJson && (
-                  <>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setShowFieldPicker(!showFieldPicker); }}
-                      className={cn(
-                        "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all",
-                        showFieldPicker ? "bg-indigo-500/20 text-indigo-300 border border-indigo-500/30" : "bg-slate-800 text-slate-400 border border-slate-700 hover:bg-slate-700"
-                      )}
-                    >
-                      <Filter className="w-3.5 h-3.5" />
-                      Fields {selectedFields.length > 0 && `(${selectedFields.length})`}
-                    </button>
-
-                    <button
-                      disabled={selectedFields.length === 0}
-                      onClick={(e) => { e.stopPropagation(); setShowSelectedOnly(!showSelectedOnly); }}
-                      className={cn(
-                        "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed",
-                        showSelectedOnly ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/30" : "bg-slate-800 text-slate-400 border border-slate-700 hover:bg-slate-700"
-                      )}
-                    >
-                      {showSelectedOnly ? 'Show Full' : 'Show Selected'}
-                    </button>
-                  </>
-                )}
+                <div className="h-4 w-px mx-1 hidden sm:block" style={{ backgroundColor: theme.mode === 'light' ? '#cbd5e1' : '#334155' }}></div>
+                <button
+                  onClick={(e) => { e.stopPropagation(); setShowFieldPicker(true); }}
+                  className={cn(
+                    "px-3 py-1.5 rounded-lg text-xs font-medium transition-all border",
+                    showFieldPicker ? "bg-indigo-500/20 text-indigo-300 border border-indigo-500/30" : theme.mode === 'light' ? "bg-slate-200 text-slate-700 border border-slate-300 hover:bg-slate-300" : "bg-slate-800 text-slate-400 border border-slate-700 hover:bg-slate-700"
+                  )}
+                >
+                  Fields
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); setShowSelectedOnly(!showSelectedOnly); }}
+                  disabled={selectedFields.length === 0}
+                  className={cn(
+                    "px-3 py-1.5 rounded-lg text-xs font-medium transition-all border disabled:opacity-50 disabled:cursor-not-allowed",
+                    showSelectedOnly ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/30" : theme.mode === 'light' ? "bg-slate-200 text-slate-700 border border-slate-300 hover:bg-slate-300" : "bg-slate-800 text-slate-400 border border-slate-700 hover:bg-slate-700"
+                  )}
+                >
+                  Selected Only
+                </button>
               </div>
 
               {/* Field Picker */}
@@ -286,10 +291,14 @@ export function MessageCard({ message, showDiffByDefault = false }: MessageCardP
                     initial={{ height: 0, opacity: 0 }}
                     animate={{ height: 'auto', opacity: 1 }}
                     exit={{ height: 0, opacity: 0 }}
-                    className="mb-3 bg-slate-900/50 border border-slate-700/50 rounded-lg p-3 overflow-hidden"
+                    className="mb-3 border rounded-lg p-3 overflow-hidden"
+                    style={{
+                      backgroundColor: theme.mode === 'light' ? 'rgba(241, 245, 249, 0.5)' : 'rgba(15, 23, 42, 0.5)',
+                      borderColor: theme.mode === 'light' ? '#cbd5e1' : 'rgba(71, 85, 105, 0.5)'
+                    }}
                   >
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">Select Fields to Display</span>
+                      <span className={cn("text-[10px] uppercase tracking-wider font-bold", theme.mode === 'light' ? "text-slate-500" : "text-slate-400")}>Select Fields to Display</span>
                       <button 
                         onClick={() => setSelectedFields([])}
                         className="text-[10px] text-rose-400 hover:text-rose-300 transition-colors"
@@ -306,7 +315,7 @@ export function MessageCard({ message, showDiffByDefault = false }: MessageCardP
                             "flex items-center gap-1 px-2 py-1 rounded text-[10px] font-mono transition-all border",
                             selectedFields.includes(field)
                               ? "bg-cyan-500/20 text-cyan-300 border-cyan-500/30"
-                              : "bg-slate-800 text-slate-500 border-slate-700 hover:border-slate-600"
+                              : theme.mode === 'light' ? "bg-slate-200 text-slate-700 border-slate-300 hover:border-slate-400" : "bg-slate-800 text-slate-500 border-slate-700 hover:border-slate-600"
                           )}
                         >
                           {selectedFields.includes(field) && <Check className="w-2.5 h-2.5" />}
@@ -323,13 +332,18 @@ export function MessageCard({ message, showDiffByDefault = false }: MessageCardP
                 {viewMode === 'diff' && message.previousPayload ? (
                   <DiffViewer oldValue={message.previousPayload} newValue={message.payload} />
                 ) : (
-                  <pre className="font-mono text-xs text-slate-300 whitespace-pre-wrap overflow-x-auto p-4 rounded-md bg-slate-900/80 border border-slate-700/50 shadow-inner max-h-[400px] overflow-y-auto custom-scrollbar">
+                  <pre className={cn(
+                    "font-mono text-xs whitespace-pre-wrap overflow-x-auto p-4 rounded-md max-h-[400px] overflow-y-auto custom-scrollbar", 
+                    theme.mode === 'light' 
+                      ? "bg-slate-100 text-slate-900 border border-slate-300 shadow-sm" 
+                      : "bg-slate-900/80 text-slate-200 border border-slate-700/50 shadow-inner"
+                  )}>
                     {viewMode === 'formatted' && isJson ? (
                       <code dangerouslySetInnerHTML={{ __html: syntaxHighlight(formattedPayload) }} />
                     ) : viewMode === 'formatted' && isXml ? (
-                      <code className="text-orange-300">{formattedPayload}</code>
+                      <code className={theme.mode === 'light' ? "text-orange-700" : "text-orange-300"}>{formattedPayload}</code>
                     ) : viewMode === 'formatted' && isHtml ? (
-                      <code className="text-red-300">{formattedPayload}</code>
+                      <code className={theme.mode === 'light' ? "text-red-700" : "text-red-300"}>{formattedPayload}</code>
                     ) : (
                       <code>{viewMode === 'formatted' ? formattedPayload : message.payload}</code>
                     )}
@@ -338,7 +352,7 @@ export function MessageCard({ message, showDiffByDefault = false }: MessageCardP
                 
                 <button 
                   onClick={() => handleCopy(viewMode === 'formatted' ? formattedPayload : message.payload)}
-                  className="absolute top-2 right-2 p-1.5 bg-slate-800/80 hover:bg-cyan-500/20 text-slate-400 hover:text-cyan-300 rounded-md border border-slate-700/50 opacity-0 group-hover/copy:opacity-100 transition-all backdrop-blur-sm"
+                  className={cn("absolute top-2 right-2 p-1.5 rounded-md border opacity-0 group-hover/copy:opacity-100 transition-all backdrop-blur-sm", theme.mode === 'light' ? "bg-slate-300/80 hover:bg-cyan-100/50 text-slate-700 hover:text-cyan-700 border-slate-300" : "bg-slate-800/80 hover:bg-cyan-500/20 text-slate-400 hover:text-cyan-300 border-slate-700/50")}
                   title="Copy to clipboard"
                 >
                   <Copy className="w-3.5 h-3.5" />

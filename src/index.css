@@ -1,5 +1,45 @@
 @import "tailwindcss";
 
+:root {
+  /* Dark theme (default) */
+  --bg-primary: #020617;
+  --bg-secondary: #0f172a;
+  --bg-tertiary: #1e293b;
+  --bg-card: rgba(30, 41, 59, 0.5);
+  --bg-transparent: rgba(15, 23, 42, 0.4);
+  
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-tertiary: #64748b;
+  
+  --border-primary: rgba(51, 65, 85, 0.5);
+  --border-secondary: rgba(51, 65, 85, 0.3);
+  
+  --accent-cyan: #06b6d4;
+  --accent-purple: #9333ea;
+  
+  /* Light theme */
+  --light-bg-primary: #f8fafc;
+  --light-bg-secondary: #ffffff;
+  --light-bg-tertiary: #f1f5f9;
+  --light-bg-card: rgba(241, 245, 249, 0.8);
+  --light-bg-transparent: rgba(255, 255, 255, 0.7);
+  
+  --light-text-primary: #0f172a;
+  --light-text-secondary: #475569;
+  --light-text-tertiary: #64748b;
+  
+  --light-border-primary: rgba(203, 213, 225, 0.8);
+  --light-border-secondary: rgba(203, 213, 225, 0.5);
+}
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+}
+
 @layer utilities {
   .custom-scrollbar::-webkit-scrollbar {
     width: 6px;
@@ -22,4 +62,61 @@
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
+}
+
+/* Theme-specific styles */
+.theme-dark {
+  color-scheme: dark;
+}
+
+.theme-light {
+  color-scheme: light;
+  --bg-primary: var(--light-bg-primary);
+  --bg-secondary: var(--light-bg-secondary);
+  --bg-tertiary: var(--light-bg-tertiary);
+  --bg-card: var(--light-bg-card);
+  --bg-transparent: var(--light-bg-transparent);
+  --text-primary: var(--light-text-primary);
+  --text-secondary: var(--light-text-secondary);
+  --text-tertiary: var(--light-text-tertiary);
+  --border-primary: var(--light-border-primary);
+  --border-secondary: var(--light-border-secondary);
+}
+
+/* Transparent overlay effects - 真正透明 */
+.theme-transparent {
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  --bg-primary: transparent;
+  --bg-secondary: rgba(30, 41, 59, 0.15);
+  --bg-tertiary: rgba(30, 41, 59, 0.1);
+  --bg-card: rgba(30, 41, 59, 0.08);
+  --text-primary: #f1f5f9;
+  --text-secondary: rgba(241, 245, 249, 0.9);
+  --border-primary: rgba(71, 85, 105, 0.2);
+}
+
+.theme-light.theme-transparent {
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  --bg-primary: transparent;
+  --bg-secondary: rgba(241, 245, 249, 0.25);
+  --bg-tertiary: rgba(241, 245, 249, 0.18);
+  --bg-card: rgba(241, 245, 249, 0.12);
+  --text-primary: #0f172a;
+  --text-secondary: rgba(15, 23, 42, 0.9);
+  --border-primary: rgba(203, 213, 225, 0.3);
+}
+
+/* Ensure text readability on transparent backgrounds */
+.theme-transparent .text-content,
+.theme-transparent .message-card,
+.theme-transparent .panel-content {
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.theme-light.theme-transparent .text-content,
+.theme-light.theme-transparent .message-card,
+.theme-light.theme-transparent .panel-content {
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.5);
 }

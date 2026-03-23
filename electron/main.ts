@@ -38,6 +38,24 @@ function createWindow() {
 
   console.log('[Main] BrowserWindow created with preload:', preloadPath);
 
+  // 设置内容安全策略 (CSP)
+  win.webContents.session.webRequest.onHeadersReceived((details, callback) => {
+    callback({
+      responseHeaders: {
+        ...details.responseHeaders,
+        'Content-Security-Policy': [
+          "default-src 'self'",
+          "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+          "style-src 'self' 'unsafe-inline'",
+          "img-src 'self' data: https:",
+          "font-src 'self' data:",
+          "connect-src 'self' ws: wss: mqtt: mqtts: http: https:",
+          "worker-src 'self' blob:",
+        ].join('; ')
+      }
+    });
+  });
+
   // 始终加载本地构建的 HTML 文件，确保 preload 正常工作
   // 开发模式下需要先运行 npm run build
   win.loadFile(path.join(__dirname, '../dist/index.html'));

@@ -35,4 +35,4 @@ echo ""
 
 # 5. 启动 Electron
 echo "🎯 Starting Electron..."
-npx electron .
+npm run electron:dev

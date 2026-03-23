@@ -16,7 +16,7 @@
     "clean": "rm -rf dist dist-electron release",
     "lint": "tsc --noEmit",
     "icons": "node scripts/generate-icons-from-css.js && node scripts/generate-icns-simple.js",
-    "electron:dev": "node scripts/start-electron-dev.js",
+    "electron:dev": "node scripts/start-dev.js",
     "electron:build": "npm run build && tsc -p electron/tsconfig.json && electron-builder",
     "electron:build:win": "npm run electron:build -- -w",
     "electron:build:mac": "npm run electron:build -- -m",

@@ -81,10 +81,30 @@ export function useMqtt() {
     
     const inElectron = isElectron();
 
-    // 清理之前的连接
+    // 清理之前的连接 - 增强版清理逻辑
     if (client) {
-      client.end();
-      setClient(null);
+      try {
+        // 移除所有事件监听器，避免触发状态更新
+        client.removeAllListeners('connect');
+        client.removeAllListeners('error');
+        client.removeAllListeners('close');
+        client.removeAllListeners('message');
+        
+        // 只在已连接时才调用 end()
+        if (status === 'connected' || status === 'connecting') {
+          client.end(true, {}, () => {
+            // 回调中使用 setTimeout 确保异步执行
+            setTimeout(() => {
+              setClient(null);
+            }, 0);
+          });
+        } else {
+          setClient(null);
+        }
+      } catch (err) {
+        console.error('[MQTT] Cleanup error:', err);
+        setClient(null);
+      }
     }
 
     if (inElectron) {
@@ -200,7 +220,7 @@ export function useMqtt() {
       const connectOptions: IClientOptions = {
         ...options,
         protocolVersion: 4,
-        reconnectPeriod: 1000,
+        reconnectPeriod: 0, // 禁用自动重连，由用户手动控制
       };
 
       const mqttClient = mqtt.connect(url, connectOptions);
@@ -214,11 +234,12 @@ export function useMqtt() {
         console.error('[MQTT] Error:', err);
         setStatus('error');
         setErrorMsg(err.message);
-        mqttClient.end();
+        // 不在 error 时立即断开，让 close 事件处理
       });
 
       mqttClient.on('close', () => {
-        if (status === 'connected') {
+        // 只有在连接状态不是 disconnected 时才更新状态
+        if (status !== 'disconnected') {
           setStatus('disconnected');
         }
       });
@@ -262,7 +283,7 @@ export function useMqtt() {
 
       setClient(mqttClient);
     }
-  }, [client]);
+  }, [client, status]);
 
   const disconnect = useCallback(() => {
     const inElectron = isElectron();
@@ -270,10 +291,15 @@ export function useMqtt() {
     if (inElectron) {
       // Electron 环境：通过 IPC 断开
       if ((window as any).electronAPI?.mqtt) {
-        (window as any).electronAPI.mqtt.disconnect();
-        
-        // 移除所有事件监听器
-        (window as any).electronAPI.mqtt.removeAllListeners();
+        try {
+          // 先移除所有事件监听器
+          (window as any).electronAPI.mqtt.removeAllListeners();
+          
+          // 然后断开连接
+          (window as any).electronAPI.mqtt.disconnect();
+        } catch (err) {
+          console.error('[MQTT] Electron disconnect error:', err);
+        }
       }
       
       // 清理事件处理器引用
@@ -281,8 +307,24 @@ export function useMqtt() {
     } else {
       // 浏览器环境：直接断开
       if (client) {
-        client.end();
-        setClient(null);
+        try {
+          // 移除所有事件监听器
+          client.removeAllListeners('connect');
+          client.removeAllListeners('error');
+          client.removeAllListeners('close');
+          client.removeAllListeners('message');
+          
+          // 调用 end 方法，force=true 强制立即关闭
+          client.end(true, {}, () => {
+            // 回调中清理
+            setTimeout(() => {
+              setClient(null);
+            }, 0);
+          });
+        } catch (err) {
+          console.error('[MQTT] Browser disconnect error:', err);
+          setClient(null);
+        }
       }
     }
     
@@ -296,9 +338,11 @@ export function useMqtt() {
     
     if (inElectron) {
       // Electron 环境：通过 IPC 订阅
-      if ((window as any).electronAPI?.mqtt) {
+      if ((window as any).electronAPI?.mqtt && status === 'connected') {
         (window as any).electronAPI.mqtt.subscribe(topic, qos);
         setSubscriptions((prev) => Array.from(new Set([...prev, topic])));
+      } else {
+        console.error('[MQTT] Cannot subscribe: not connected or IPC not available');
       }
     } else {
       // 浏览器环境：直接订阅
@@ -309,6 +353,11 @@ export function useMqtt() {
           } else {
             console.error('[MQTT] Subscribe error:', err);
           }
+        });
+      } else {
+        console.error('[MQTT] Cannot subscribe: client not connected', { 
+          hasClient: !!client, 
+          status 
         });
       }
     }

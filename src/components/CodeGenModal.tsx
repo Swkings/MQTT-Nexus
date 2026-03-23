@@ -4,7 +4,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import { generateCode, Language } from '../lib/codeGen';
 import { cn } from '../lib/utils';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import { vscDarkPlus, vs } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import { useTheme } from '../contexts/ThemeContext';
 
 interface CodeGenModalProps {
   isOpen: boolean;
@@ -22,6 +23,7 @@ const LANGUAGES: { id: Language; name: string; icon: string; prism: string }[] =
 ];
 
 export function CodeGenModal({ isOpen, onClose, json, topicName }: CodeGenModalProps) {
+  const { theme, themeClasses } = useTheme();
   const [selectedLang, setSelectedLang] = useState<Language>('go');
   const [copied, setCopied] = useState(false);
 
@@ -44,27 +46,44 @@ export function CodeGenModal({ isOpen, onClose, json, topicName }: CodeGenModalP
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 backdrop-blur-sm" style={{ backgroundColor: `rgba(0, 0, 0, ${theme.mode === 'light' ? 0.3 : 0.6})` }}>
         <motion.div
           initial={{ opacity: 0, scale: 0.95, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
-          className="bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden"
+          className={cn(
+            "border rounded-2xl shadow-2xl w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden",
+            themeClasses.cardBg,
+            themeClasses.border,
+            themeClasses.shadow
+          )}
         >
           {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-slate-800">
+          <div className={cn(
+            "flex items-center justify-between p-6 border-b",
+            themeClasses.border
+          )}>
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-cyan-500/10 rounded-lg">
-                <Code2 className="w-6 h-6 text-cyan-400" />
+              <div className={cn(
+                "p-2 rounded-lg",
+                theme.overlay === 'transparent' ? "bg-cyan-500/10" : "bg-cyan-500/10"
+              )}>
+                <Code2 className={cn("w-6 h-6", theme.mode === 'light' ? "text-cyan-600" : "text-cyan-400")} />
               </div>
               <div>
-                <h2 className="text-xl font-bold text-slate-100">Generate Data Structure</h2>
-                <p className="text-sm text-slate-400">Convert JSON message to native code structures</p>
+                <h2 className={cn("text-xl font-bold", themeClasses.textPrimary)}>Generate Data Structure</h2>
+                <p className={cn("text-sm", themeClasses.textSecondary)}>Convert JSON message to native code structures</p>
               </div>
             </div>
             <button
               onClick={onClose}
-              className="p-2 text-slate-400 hover:text-slate-100 hover:bg-slate-800 rounded-xl transition-all"
+              className={cn(
+                "p-2 rounded-xl transition-all",
+                themeClasses.textSecondary,
+                theme.mode === 'light' 
+                  ? "hover:text-slate-700 hover:bg-slate-200" 
+                  : "hover:text-slate-200 hover:bg-slate-700"
+              )}
             >
               <X className="w-6 h-6" />
             </button>
@@ -73,17 +92,28 @@ export function CodeGenModal({ isOpen, onClose, json, topicName }: CodeGenModalP
           {/* Content */}
           <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
             {/* Sidebar - Language Selection */}
-            <div className="w-full md:w-48 bg-slate-900/50 border-r border-slate-800 p-4 space-y-2">
-              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-4 px-2">Select Language</p>
+            <div className={cn(
+              "w-full md:w-48 border-r p-4 space-y-2",
+              themeClasses.border,
+              themeClasses.bgSecondary
+            )}>
+              <p className={cn("text-xs font-semibold uppercase tracking-wider mb-4 px-2", themeClasses.textSecondary)}>
+                Select Language
+              </p>
               {LANGUAGES.map((lang) => (
                 <button
                   key={lang.id}
                   onClick={() => setSelectedLang(lang.id)}
                   className={cn(
-                    "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all group",
+                    "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all group border",
                     selectedLang === lang.id
-                      ? "bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 shadow-[0_0_15px_rgba(34,211,238,0.1)]"
-                      : "text-slate-400 hover:text-slate-200 hover:bg-slate-800 border border-transparent"
+                      ? "bg-cyan-500/10 text-cyan-400 border-cyan-500/20 shadow-[0_0_15px_rgba(34,211,238,0.1)]"
+                      : cn(
+                          themeClasses.textSecondary, 
+                          theme.mode === 'light' 
+                            ? "hover:text-slate-700 hover:bg-slate-200 border-slate-300" 
+                            : "hover:text-slate-200 hover:bg-slate-700 border-transparent"
+                        )
                   )}
                 >
                   <img src={lang.icon} alt={lang.name} className="w-5 h-5 opacity-80 group-hover:opacity-100 transition-opacity" />
@@ -93,26 +123,28 @@ export function CodeGenModal({ isOpen, onClose, json, topicName }: CodeGenModalP
             </div>
 
             {/* Code Preview */}
-            <div className="flex-1 flex flex-col bg-slate-950/50 overflow-hidden">
-              <div className="flex items-center justify-between px-6 py-3 border-b border-slate-800 bg-slate-900/30">
-                <span className="text-xs font-mono text-slate-500 uppercase tracking-widest">{selectedLang} Output</span>
+            <div className={cn("flex-1 flex flex-col overflow-hidden", themeClasses.bgTertiary)}>
+              <div className={cn("flex items-center justify-between px-6 py-3 border-b", themeClasses.border, themeClasses.panelBg)}>
+                <span className={cn("text-xs font-mono uppercase tracking-widest", themeClasses.textSecondary)}>{selectedLang} Output</span>
                 <button
                   onClick={handleCopy}
                   className={cn(
-                    "flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all",
+                    "flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all border",
                     copied
-                      ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
-                      : "bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700"
+                      ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
+                      : theme.mode === 'light' 
+                        ? "bg-slate-200 text-slate-700 hover:bg-slate-300 border-slate-300" 
+                        : "bg-slate-800 text-slate-300 hover:bg-slate-700 border-slate-700"
                   )}
                 >
                   {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
                   {copied ? 'Copied!' : 'Copy Code'}
                 </button>
               </div>
-              <div className="flex-1 overflow-auto p-6 custom-scrollbar bg-slate-950">
+              <div className={cn("flex-1 overflow-auto custom-scrollbar p-6", themeClasses.bgTertiary)}>
                 <SyntaxHighlighter
                   language={currentLang.prism}
-                  style={vscDarkPlus}
+                  style={theme.mode === 'light' ? vs : vscDarkPlus}
                   customStyle={{
                     background: 'transparent',
                     padding: 0,
@@ -133,10 +165,17 @@ export function CodeGenModal({ isOpen, onClose, json, topicName }: CodeGenModalP
           </div>
 
           {/* Footer */}
-          <div className="p-4 border-t border-slate-800 bg-slate-900/50 flex justify-end">
+          <div className={cn("p-4 border-t flex justify-end", themeClasses.border, themeClasses.panelBg)}>
             <button
               onClick={onClose}
-              className="px-6 py-2 bg-slate-800 text-slate-200 hover:bg-slate-700 rounded-xl text-sm font-medium transition-all border border-slate-700"
+              className={cn(
+                "px-6 py-2 text-sm font-medium rounded-xl transition-all border",
+                themeClasses.textSecondary,
+                themeClasses.border,
+                theme.mode === 'light' 
+                  ? "bg-slate-200 hover:bg-slate-300" 
+                  : "bg-slate-800 hover:bg-slate-700"
+              )}
             >
               Close
             </button>

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useRef } from 'react';
 import { MqttMessage } from '../hooks/useMqtt';
 import { DiffViewer } from './DiffViewer';
 import { MessageCard } from './MessageCard';
@@ -8,6 +8,7 @@ import { Activity, SplitSquareHorizontal, Play, Pause, Trash2, History, Filter, 
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
 import { format } from 'date-fns';
+import { useTheme } from '../contexts/ThemeContext';
 
 function getAllPaths(obj: any, prefix = ''): string[] {
   let paths: string[] = [];
@@ -32,6 +33,7 @@ interface TopicViewProps {
 }
 
 export function TopicView({ topic, messages, onClear }: TopicViewProps) {
+  const { theme, themeClasses } = useTheme();
   const [isPaused, setIsPaused] = useState(false);
   const [pausedMessages, setPausedMessages] = useState<MqttMessage[]>([]);
   const [showHistory, setShowHistory] = useState(false);
@@ -49,6 +51,7 @@ export function TopicView({ topic, messages, onClear }: TopicViewProps) {
   const [showSelectedOnly, setShowSelectedOnly] = useState(false);
   const [showFieldPicker, setShowFieldPicker] = useState(false);
   const [fieldSearch, setFieldSearch] = useState('');
+  const fieldPickerTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleMouseDown = (e: React.MouseEvent) => {
     setIsResizing(true);
@@ -78,6 +81,16 @@ export function TopicView({ topic, messages, onClear }: TopicViewProps) {
       window.removeEventListener('mouseup', handleMouseUp);
     };
   }, [isResizing]);
+
+  // 清理字段选择器定时器
+  React.useEffect(() => {
+    return () => {
+      if (fieldPickerTimerRef.current) {
+        clearTimeout(fieldPickerTimerRef.current);
+        fieldPickerTimerRef.current = null;
+      }
+    };
+  }, []);
 
   const handlePauseToggle = () => {
     if (isPaused) {
@@ -196,7 +209,13 @@ export function TopicView({ topic, messages, onClear }: TopicViewProps) {
 
   if (!topic) {
     return (
-      <div className="bg-slate-800/50 backdrop-blur-xl border border-slate-700/50 rounded-2xl shadow-2xl shadow-black/50 flex flex-col h-full items-center justify-center text-slate-500">
+      <div className={cn(
+        "backdrop-blur-xl border rounded-2xl shadow-2xl flex flex-col h-full items-center justify-center",
+        themeClasses.cardBg,
+        themeClasses.border,
+        themeClasses.shadow,
+        themeClasses.text
+      )}>
         <Activity className="w-12 h-12 mb-4 opacity-20" />
         <p>Select a topic from the tree to view messages</p>
       </div>
@@ -205,18 +224,25 @@ export function TopicView({ topic, messages, onClear }: TopicViewProps) {
 
   return (
     <div className={cn(
-      "bg-slate-800/50 backdrop-blur-xl border border-slate-700/50 rounded-2xl shadow-2xl shadow-black/50 flex flex-col overflow-hidden transition-all duration-300",
+      "backdrop-blur-xl border rounded-2xl shadow-2xl flex flex-col overflow-hidden transition-all duration-300",
+      themeClasses.cardBg,
+      themeClasses.border,
+      themeClasses.shadow,
       isFullScreen ? "fixed inset-4 z-50 rounded-2xl" : "h-full"
     )}>
       {/* Header */}
-      <div className="p-4 sm:p-6 border-b border-slate-700/50 bg-slate-900/20 shrink-0">
+      <div className={cn(
+        "p-4 sm:p-6 border-b shrink-0",
+        themeClasses.border,
+        themeClasses.panelBg
+      )}>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex-1 min-w-0">
-            <h2 className="text-lg font-semibold text-slate-100 flex items-center gap-2">
+            <h2 className={cn("text-lg font-semibold flex items-center gap-2", themeClasses.textPrimary)}>
               <span className="w-2 h-2 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.8)] shrink-0" />
               <span className="truncate" title={topic}>{topic}</span>
             </h2>
-            <p className="text-xs text-slate-400 font-mono mt-1">
+            <p className={cn("text-xs font-mono", themeClasses.textSecondary)}>
               {topicMessages.length} messages {isPaused && <span className="text-amber-400 ml-1">(Paused)</span>}
             </p>
           </div>
@@ -224,7 +250,7 @@ export function TopicView({ topic, messages, onClear }: TopicViewProps) {
           <div className="flex items-center gap-2 shrink-0 flex-wrap">
             <button
               onClick={() => setIsCodeGenOpen(true)}
-              className="p-2 bg-slate-700/50 text-slate-300 border border-slate-600 rounded-lg hover:bg-slate-700 transition-colors"
+              className={cn("p-2 rounded-lg border transition-colors", theme.mode === 'light' ? "bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-200" : "bg-slate-800/50 text-slate-300 border border-slate-700 hover:bg-slate-700")}
               title="Generate Code Structure"
             >
               <Code2 className="w-4 h-4" />
@@ -232,7 +258,7 @@ export function TopicView({ topic, messages, onClear }: TopicViewProps) {
 
             <button
               onClick={() => setIsFullScreen(!isFullScreen)}
-              className="p-2 bg-slate-700/50 text-slate-300 border border-slate-600 rounded-lg hover:bg-slate-700 transition-colors"
+              className={cn("p-2 rounded-lg border transition-colors", theme.mode === 'light' ? "bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-200" : "bg-slate-800/50 text-slate-300 border border-slate-700 hover:bg-slate-700")}
               title={isFullScreen ? "Exit Full Screen" : "Full Screen"}
             >
               {isFullScreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
@@ -244,7 +270,7 @@ export function TopicView({ topic, messages, onClear }: TopicViewProps) {
                 "flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors border",
                 showHistory 
                   ? "bg-purple-500/20 text-purple-400 border-purple-500/30 hover:bg-purple-500/30" 
-                  : "bg-slate-700/50 text-slate-300 border-slate-600 hover:bg-slate-700"
+                  : theme.mode === 'light' ? "bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-200" : "bg-slate-800/50 text-slate-300 border border-slate-700 hover:bg-slate-700"
               )}
               title="Toggle History"
             >
@@ -258,7 +284,7 @@ export function TopicView({ topic, messages, onClear }: TopicViewProps) {
                 "flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors border",
                 isPaused 
                   ? "bg-amber-500/20 text-amber-400 border-amber-500/30 hover:bg-amber-500/30" 
-                  : "bg-slate-700/50 text-slate-300 border-slate-600 hover:bg-slate-700"
+                  : theme.mode === 'light' ? "bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-200" : "bg-slate-800/50 text-slate-300 border border-slate-700 hover:bg-slate-700"
               )}
               title={isPaused ? "Resume feed" : "Pause feed"}
             >
@@ -289,12 +315,17 @@ export function TopicView({ topic, messages, onClear }: TopicViewProps) {
                 <div className="flex flex-col gap-3 mb-4 shrink-0">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                      <h3 className="text-sm font-medium text-slate-300 flex items-center gap-2">
+                      <h3 className={cn("text-sm font-medium flex items-center gap-2", themeClasses.textPrimary)}>
                         <SplitSquareHorizontal className="w-4 h-4 text-emerald-400" />
                         Latest Message
                       </h3>
                       <div className="flex items-center gap-2">
-                        <div className="flex items-center gap-1 bg-slate-800/50 px-2 py-1 rounded-md border border-slate-700/50 text-xs text-slate-400 font-mono">
+                        <div className={cn(
+                          "flex items-center gap-1 px-2 py-1 rounded-md border text-xs font-mono",
+                          theme.mode === 'light' 
+                            ? "bg-slate-100 border-slate-300 text-slate-600" 
+                            : "bg-slate-800/50 border-slate-700/50 text-slate-400"
+                        )}>
                           <Clock className="w-3 h-3 text-purple-400" />
                           <span>{format(latestMessage.timestamp, 'yyyy-MM-dd HH:mm:ss.SSS')}</span>
                           <button 
@@ -305,7 +336,12 @@ export function TopicView({ topic, messages, onClear }: TopicViewProps) {
                             <Copy className="w-3 h-3" />
                           </button>
                         </div>
-                        <div className="flex items-center gap-1 bg-slate-800/50 px-2 py-1 rounded-md border border-slate-700/50 text-xs text-slate-400 font-mono">
+                        <div className={cn(
+                          "flex items-center gap-1 px-2 py-1 rounded-md border text-xs font-mono",
+                          theme.mode === 'light' 
+                            ? "bg-slate-100 border-slate-300 text-slate-600" 
+                            : "bg-slate-800/50 border-slate-700/50 text-slate-400"
+                        )}>
                           <Hash className="w-3 h-3 text-emerald-400" />
                           <span>{latestMessage.timestamp}</span>
                           <button 
@@ -316,7 +352,12 @@ export function TopicView({ topic, messages, onClear }: TopicViewProps) {
                             <Copy className="w-3 h-3" />
                           </button>
                         </div>
-                        <div className="flex items-center gap-1 bg-slate-800/50 px-2 py-1 rounded-md border border-slate-700/50 text-xs text-slate-400 font-mono">
+                        <div className={cn(
+                          "flex items-center gap-1 px-2 py-1 rounded-md border text-xs font-mono",
+                          theme.mode === 'light' 
+                            ? "bg-slate-100 border-slate-300 text-slate-600" 
+                            : "bg-slate-800/50 border-slate-700/50 text-slate-400"
+                        )}>
                           <Activity className="w-3 h-3 text-cyan-500" />
                           QoS {latestMessage.qos}
                         </div>
@@ -357,26 +398,50 @@ export function TopicView({ topic, messages, onClear }: TopicViewProps) {
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <div className="relative flex items-center bg-slate-800/50 border border-slate-700/50 rounded-lg overflow-visible">
+                    <div className={cn(
+                      "relative flex items-center rounded-lg overflow-visible border",
+                      theme.mode === 'light' 
+                        ? "bg-slate-100 border-slate-300" 
+                        : "bg-slate-800/50 border-slate-700/50"
+                    )}
+                      onMouseEnter={() => {
+                        if (fieldPickerTimerRef.current) {
+                          clearTimeout(fieldPickerTimerRef.current);
+                          fieldPickerTimerRef.current = null;
+                        }
+                        setShowFieldPicker(true);
+                      }}
+                      onMouseLeave={() => {
+                        fieldPickerTimerRef.current = setTimeout(() => {
+                          setShowFieldPicker(false);
+                          fieldPickerTimerRef.current = null;
+                        }, 150);
+                      }}
+                    >
                       <button
-                        onClick={() => setShowFieldPicker(!showFieldPicker)}
                         className={cn(
-                          "flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-all border-r border-slate-700/50",
-                          showFieldPicker ? "text-indigo-300" : "text-slate-300 hover:bg-slate-700/50"
+                          "flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-all border-r",
+                          theme.mode === 'light' 
+                            ? "border-slate-300 text-slate-700 hover:bg-slate-200" 
+                            : "border-slate-700/50 text-slate-300 hover:bg-slate-700/50",
+                          showFieldPicker && (theme.mode === 'light' ? "text-indigo-600" : "text-indigo-300")
                         )}
                       >
                         <Filter className="w-3.5 h-3.5" />
                         Fields {selectedFields.length > 0 && `(${selectedFields.length})`}
                       </button>
                       <div className="relative flex items-center min-w-[200px]">
-                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500" />
+                        <Search className={cn("absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5", theme.mode === 'light' ? "text-slate-400" : "text-slate-500")} />
                         <input
                           type="text"
                           placeholder="Search fields..."
                           value={fieldSearch}
                           onFocus={() => setShowFieldPicker(true)}
                           onChange={(e) => setFieldSearch(e.target.value)}
-                          className="w-full bg-transparent pl-8 pr-3 py-1.5 text-xs text-slate-300 placeholder:text-slate-600 focus:outline-none transition-colors"
+                          className={cn(
+                            "w-full bg-transparent pl-8 pr-3 py-1.5 text-xs focus:outline-none transition-colors placeholder:text-slate-400",
+                            theme.mode === 'light' ? "text-slate-700" : "text-slate-300"
+                          )}
                         />
                       </div>
 
@@ -386,10 +451,28 @@ export function TopicView({ topic, messages, onClear }: TopicViewProps) {
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: 10 }}
-                            className="absolute top-full left-0 mt-2 w-[450px] bg-slate-900 border border-slate-700 rounded-xl shadow-2xl z-50 p-4"
+                            className={cn(
+                              "absolute top-full left-0 mt-2 w-[450px] rounded-xl shadow-2xl z-50 p-4 border",
+                              theme.mode === 'light' 
+                                ? "bg-white border-slate-300" 
+                                : "bg-slate-900 border-slate-700"
+                            )}
+                            onMouseEnter={() => {
+                              if (fieldPickerTimerRef.current) {
+                                clearTimeout(fieldPickerTimerRef.current);
+                                fieldPickerTimerRef.current = null;
+                              }
+                              setShowFieldPicker(true);
+                            }}
+                            onMouseLeave={() => {
+                              fieldPickerTimerRef.current = setTimeout(() => {
+                                setShowFieldPicker(false);
+                                fieldPickerTimerRef.current = null;
+                              }, 150);
+                            }}
                           >
                             <div className="flex items-center justify-between mb-3">
-                              <span className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">Select Fields to Monitor</span>
+                              <span className={cn("text-[10px] uppercase tracking-wider font-bold", themeClasses.textSecondary)}>Select Fields to Monitor</span>
                               <div className="flex items-center gap-3">
                                 <button 
                                   onClick={() => setSelectedFields([])}
@@ -399,7 +482,7 @@ export function TopicView({ topic, messages, onClear }: TopicViewProps) {
                                 </button>
                                 <button 
                                   onClick={() => setShowFieldPicker(false)}
-                                  className="text-slate-500 hover:text-slate-300"
+                                  className={cn("text-slate-500 hover:text-slate-300", themeClasses.textSecondary)}
                                 >
                                   <X className="w-3 h-3" />
                                 </button>
@@ -416,7 +499,9 @@ export function TopicView({ topic, messages, onClear }: TopicViewProps) {
                                       "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-mono transition-all border",
                                       selectedFields.includes(field)
                                         ? "bg-cyan-500/20 text-cyan-300 border-cyan-500/30"
-                                        : "bg-slate-800/50 text-slate-500 border-slate-700 hover:border-slate-600"
+                                        : theme.mode === 'light' 
+                                          ? "bg-slate-100 text-slate-700 border-slate-300 hover:border-slate-400 hover:bg-slate-200" 
+                                          : "bg-slate-800 text-slate-400 border-slate-700 hover:border-slate-600 hover:bg-slate-700"
                                     )}
                                   >
                                     {selectedFields.includes(field) && <Check className="w-3 h-3" />}
@@ -424,7 +509,7 @@ export function TopicView({ topic, messages, onClear }: TopicViewProps) {
                                   </button>
                                 ))}
                               {allLatestFields.filter(field => field.toLowerCase().includes(fieldSearch.toLowerCase())).length === 0 && (
-                                <div className="text-xs text-slate-600 py-4 w-full text-center">No fields found matching "{fieldSearch}"</div>
+                                <div className={cn("text-xs py-4 w-full text-center", themeClasses.textSecondary)}>No fields found matching "{fieldSearch}"</div>
                               )}
                             </div>
                           </motion.div>
@@ -439,7 +524,7 @@ export function TopicView({ topic, messages, onClear }: TopicViewProps) {
                         "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all border disabled:opacity-50 disabled:cursor-not-allowed",
                         showSelectedOnly 
                           ? "bg-cyan-500/20 text-cyan-300 border-cyan-500/30" 
-                          : "bg-slate-700/50 text-slate-300 border-slate-600 hover:bg-slate-700"
+                          : theme.mode === 'light' ? "bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-200" : "bg-slate-800/50 text-slate-300 border border-slate-700 hover:bg-slate-700"
                       )}
                     >
                       {showSelectedOnly ? 'Show Full Data' : 'Show Selected Fields'}
@@ -478,23 +563,23 @@ export function TopicView({ topic, messages, onClear }: TopicViewProps) {
                 initial={{ width: 0, opacity: 0 }}
                 animate={{ width: 450, opacity: 1 }}
                 exit={{ width: 0, opacity: 0 }}
-                className="border-l border-slate-700/50 flex flex-col bg-slate-900/40 shrink-0 overflow-hidden"
+                className={cn("border-l flex flex-col shrink-0 overflow-hidden", theme.mode === 'light' ? "border-slate-300 bg-slate-100/50" : "border-slate-700/50 bg-slate-900/40")}
               >
-                <div className="p-4 border-b border-slate-700/50 bg-slate-800/50 flex items-center justify-between shrink-0">
-                  <h3 className="text-sm font-medium text-slate-300 flex items-center gap-2">
+                <div className={cn("p-4 border-b flex items-center justify-between shrink-0", theme.mode === 'light' ? "border-slate-300 bg-slate-200/50" : "border-slate-700/50 bg-slate-800/50")}>
+                  <h3 className={cn("text-sm font-medium flex items-center gap-2", theme.mode === 'light' ? "text-slate-700" : "text-slate-300")}>
                     <Activity className="w-4 h-4 text-cyan-400" />
                     Field Monitoring ({activeChartPaths.length})
                   </h3>
                   <button 
                     onClick={() => setActiveChartPaths([])}
-                    className="p-1 text-slate-500 hover:text-slate-300 hover:bg-slate-700 rounded transition-colors"
+                    className={cn("p-1 rounded transition-colors", theme.mode === 'light' ? "text-slate-500 hover:text-slate-700 hover:bg-slate-300" : "text-slate-500 hover:text-slate-300 hover:bg-slate-700")}
                   >
                     <X className="w-4 h-4" />
                   </button>
                 </div>
                 <div className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-4">
                   {activeChartPaths.map(path => (
-                    <div key={path} className="bg-slate-800/30 border border-slate-700/50 rounded-xl overflow-hidden">
+                    <div key={path} className={cn("border rounded-xl overflow-hidden", theme.mode === 'light' ? "bg-slate-200/30 border-slate-300" : "bg-slate-800/30 border-slate-700/50")}>
                       <ChartPanel 
                         data={getChartData(path)} 
                         path={path} 
@@ -517,7 +602,7 @@ export function TopicView({ topic, messages, onClear }: TopicViewProps) {
               initial={{ width: 0, opacity: 0 }}
               animate={{ width: historyWidth, opacity: 1 }}
               exit={{ width: 0, opacity: 0 }}
-              className="border-l border-slate-700/50 flex flex-col bg-slate-900/20 shrink-0 relative"
+              className={cn("border-l flex flex-col shrink-0 relative", theme.mode === 'light' ? "border-slate-300 bg-slate-100/20" : "border-slate-700/50 bg-slate-900/20")}
             >
               {/* Resize Handle */}
               <div
@@ -544,13 +629,18 @@ export function TopicView({ topic, messages, onClear }: TopicViewProps) {
                 </div>
                 <div className="flex flex-col gap-2">
                   <div className="relative">
-                    <Calendar className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500" />
+                    <Calendar className={cn("absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5", theme.mode === 'light' ? "text-slate-400" : "text-slate-500")} />
                     <input
                       type="text"
                       placeholder="Search time (e.g. 14:54)"
                       value={searchTime}
                       onChange={(e) => setSearchTime(e.target.value)}
-                      className="bg-slate-800 border border-slate-700 text-slate-300 rounded-md pl-8 pr-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-purple-500 w-full"
+                      className={cn(
+                        "rounded-md pl-8 pr-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-purple-500 w-full border transition-colors",
+                        theme.mode === 'light' 
+                          ? "bg-slate-100 border-slate-300 text-slate-700 placeholder:text-slate-500 hover:border-slate-400" 
+                          : "bg-slate-800/50 border-slate-700/50 text-slate-300 placeholder:text-slate-500 hover:border-slate-600"
+                      )}
                     />
                   </div>
                 </div>

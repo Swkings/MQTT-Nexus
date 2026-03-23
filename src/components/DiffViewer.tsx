@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { diffJson, diffLines, Change } from 'diff';
 import { cn } from '../lib/utils';
 import { Copy, LineChart as LineChartIcon } from 'lucide-react';
+import { useTheme } from '../contexts/ThemeContext';
 
 interface DiffViewerProps {
   oldValue: string;
@@ -13,21 +14,21 @@ interface DiffViewerProps {
   noScroll?: boolean;
 }
 
-export function syntaxHighlight(json: string) {
+export function syntaxHighlight(json: string, isLightTheme: boolean = false) {
   if (!json) return '';
   let escaped = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   return escaped.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function (match) {
-    let cls = 'text-blue-400'; // number
+    let cls = isLightTheme ? 'text-blue-600' : 'text-blue-400'; // number
     if (/^"/.test(match)) {
       if (/:$/.test(match)) {
-        cls = 'text-emerald-400'; // key
+        cls = isLightTheme ? 'text-emerald-600' : 'text-emerald-400'; // key
       } else {
-        cls = 'text-amber-300'; // string
+        cls = isLightTheme ? 'text-amber-600' : 'text-amber-300'; // string
       }
     } else if (/true|false/.test(match)) {
-      cls = 'text-purple-400'; // boolean
+      cls = isLightTheme ? 'text-purple-600' : 'text-purple-400'; // boolean
     } else if (/null/.test(match)) {
-      cls = 'text-slate-500'; // null
+      cls = isLightTheme ? 'text-slate-600' : 'text-slate-500'; // null
     }
     return '<span class="' + cls + '">' + match + '</span>';
   });
@@ -58,6 +59,7 @@ export function getLinePaths(jsonString: string): string[] {
 }
 
 export function DiffViewer({ oldValue, newValue, className, viewMode = 'inline', onChartClick, activeChartPaths = [], noScroll = false }: DiffViewerProps) {
+  const { theme } = useTheme();
   const diffs = useMemo(() => {
     try {
       // Try parsing as JSON first
@@ -97,7 +99,7 @@ export function DiffViewer({ oldValue, newValue, className, viewMode = 'inline',
 
   if (viewMode === 'latest') {
     return (
-      <div className={cn("relative group font-mono text-xs flex flex-col rounded-md bg-slate-900/50 border border-slate-700/50", !noScroll && "overflow-hidden", className)}>
+      <div className={cn("relative group font-mono text-xs flex flex-col rounded-md border", !noScroll && "overflow-hidden", className, theme.mode === 'light' ? "bg-slate-100 border-slate-300" : "bg-slate-900/50 border-slate-700/50")}>
         <div className={cn(
           "z-20 pointer-events-none flex justify-end pr-2",
           noScroll ? "sticky top-2 h-0" : "absolute top-2 right-2 w-full"
@@ -120,7 +122,7 @@ export function DiffViewer({ oldValue, newValue, className, viewMode = 'inline',
             const path = newPaths[i];
             const isActive = activeChartPaths.includes(path);
             return (
-              <div key={i} className={cn("px-2 py-0.5 whitespace-pre flex items-center hover:bg-slate-800/50 transition-colors", isActive && "bg-cyan-900/30")}>
+              <div key={i} className={cn("px-2 py-0.5 whitespace-pre flex items-center transition-colors", theme.mode === 'light' ? "hover:bg-slate-200/50" : "hover:bg-slate-800/50", isActive && "bg-cyan-900/30")}>
                 {path && onChartClick && (
                   <button 
                     onClick={() => onChartClick(path)}
@@ -134,7 +136,7 @@ export function DiffViewer({ oldValue, newValue, className, viewMode = 'inline',
                   </button>
                 )}
                 {!path && onChartClick && <div className="w-3.5 h-3.5 mr-2 shrink-0" />}
-                <span dangerouslySetInnerHTML={{ __html: syntaxHighlight(line) }} />
+                <span className={cn(theme.mode === 'light' ? "text-slate-700" : "text-slate-300")} dangerouslySetInnerHTML={{ __html: syntaxHighlight(line, theme.mode === 'light') }} />
               </div>
             );
           })}
@@ -148,16 +150,24 @@ export function DiffViewer({ oldValue, newValue, className, viewMode = 'inline',
     let newLineIdx = 0;
 
     return (
-      <div className={cn("relative group font-mono text-xs rounded-md bg-slate-900/50 border border-slate-700/50 flex flex-col", !noScroll && "overflow-hidden", className)}>
+      <div className={cn("relative group font-mono text-xs rounded-md flex flex-col border", !noScroll && "overflow-hidden", className, theme.mode === 'light' ? "bg-slate-100 border-slate-300" : "bg-slate-900/50 border-slate-700/50")}>
         <div className={cn(
-          "grid grid-cols-2 gap-4 text-xs text-slate-500 font-sans font-medium border-b border-slate-700/50 p-2 shrink-0 bg-slate-800/50",
+          "grid grid-cols-2 gap-4 text-xs font-sans font-medium border-b p-2 shrink-0",
+          theme.mode === 'light' 
+            ? "bg-slate-200/50 border-slate-300 text-slate-700" 
+            : "bg-slate-800/50 border-slate-700/50 text-slate-300",
           noScroll && "sticky top-0 z-20"
         )}>
           <div className="flex justify-between items-center px-2">
             <span>Previous</span>
             <button 
               onClick={() => handleCopy(oldValue)}
-              className="p-1 hover:bg-slate-700 text-slate-400 hover:text-slate-200 rounded transition-colors"
+              className={cn(
+                "p-1 rounded transition-colors",
+                theme.mode === 'light' 
+                  ? "text-slate-600 hover:bg-slate-300 hover:text-slate-800" 
+                  : "text-slate-400 hover:bg-slate-700 hover:text-slate-200"
+              )}
               title="Copy formatted JSON"
             >
               <Copy className="w-3.5 h-3.5" />
@@ -167,7 +177,12 @@ export function DiffViewer({ oldValue, newValue, className, viewMode = 'inline',
             <span>Latest</span>
             <button 
               onClick={() => handleCopy(newValue)}
-              className="p-1 hover:bg-slate-700 text-slate-400 hover:text-slate-200 rounded transition-colors"
+              className={cn(
+                "p-1 rounded transition-colors",
+                theme.mode === 'light' 
+                  ? "text-slate-600 hover:bg-slate-300 hover:text-slate-800" 
+                  : "text-slate-400 hover:bg-slate-700 hover:text-slate-200"
+              )}
               title="Copy formatted JSON"
             >
               <Copy className="w-3.5 h-3.5" />
@@ -198,7 +213,7 @@ export function DiffViewer({ oldValue, newValue, className, viewMode = 'inline',
                   return (
                     <div key={`${index}-${i}`} className={cn(
                       "px-2 py-0.5 whitespace-pre min-h-[20px] flex items-center",
-                      part.removed ? "bg-rose-500/20 text-rose-300" : "text-slate-300",
+                      part.removed ? "bg-rose-500/20 text-rose-300" : theme.mode === 'light' ? "text-slate-700" : "text-slate-300",
                       isActive && !part.removed && "bg-cyan-900/30"
                     )}>
                       {path && onChartClick && (
@@ -214,7 +229,7 @@ export function DiffViewer({ oldValue, newValue, className, viewMode = 'inline',
                         </button>
                       )}
                       {!path && onChartClick && <div className="w-3.5 h-3.5 mr-2 shrink-0" />}
-                      <span dangerouslySetInnerHTML={{ __html: syntaxHighlight(line) }} />
+                      <span dangerouslySetInnerHTML={{ __html: syntaxHighlight(line, theme.mode === 'light') }} />
                     </div>
                   );
                 });
@@ -239,7 +254,7 @@ export function DiffViewer({ oldValue, newValue, className, viewMode = 'inline',
                   return (
                     <div key={`${index}-${i}`} className={cn(
                       "px-2 py-0.5 whitespace-pre min-h-[20px] flex items-center",
-                      part.added ? "bg-emerald-500/20 text-emerald-300" : "text-slate-300",
+                      part.added ? "bg-emerald-500/20 text-emerald-300" : theme.mode === 'light' ? "text-slate-700" : "text-slate-300",
                       isActive && !part.added && "bg-cyan-900/30"
                     )}>
                       {path && onChartClick && (
@@ -255,7 +270,7 @@ export function DiffViewer({ oldValue, newValue, className, viewMode = 'inline',
                         </button>
                       )}
                       {!path && onChartClick && <div className="w-3.5 h-3.5 mr-2 shrink-0" />}
-                      <span dangerouslySetInnerHTML={{ __html: syntaxHighlight(line) }} />
+                      <span dangerouslySetInnerHTML={{ __html: syntaxHighlight(line, theme.mode === 'light') }} />
                     </div>
                   );
                 });
@@ -272,7 +287,7 @@ export function DiffViewer({ oldValue, newValue, className, viewMode = 'inline',
   let newLineIdx = 0;
 
   return (
-    <div className={cn("relative group font-mono text-xs flex flex-col rounded-md bg-slate-900/50 border border-slate-700/50", !noScroll && "overflow-hidden", className)}>
+    <div className={cn("relative group font-mono text-xs flex flex-col rounded-md border", !noScroll && "overflow-hidden", className, theme.mode === 'light' ? "bg-slate-100 border-slate-300" : "bg-slate-900/50 border-slate-700/50")}>
       <div className={cn(
         "z-20 pointer-events-none flex justify-end pr-2",
         noScroll ? "sticky top-2 h-0" : "absolute top-2 right-2 w-full"
@@ -328,7 +343,7 @@ export function DiffViewer({ oldValue, newValue, className, viewMode = 'inline',
                           </button>
                         )}
                         {!path && onChartClick && <div className="w-3.5 h-3.5 mr-2 shrink-0" />}
-                        <div className="whitespace-pre flex-1" dangerouslySetInnerHTML={{ __html: syntaxHighlight(removedLines[j]) }} />
+                        <div className={cn("whitespace-pre flex-1", theme.mode === 'light' ? "text-slate-700" : "text-slate-300")} dangerouslySetInnerHTML={{ __html: syntaxHighlight(removedLines[j], theme.mode === 'light') }} />
                       </div>
                     );
                   }
@@ -351,7 +366,7 @@ export function DiffViewer({ oldValue, newValue, className, viewMode = 'inline',
                           </button>
                         )}
                         {!path && onChartClick && <div className="w-3.5 h-3.5 mr-2 shrink-0" />}
-                        <div className="whitespace-pre flex-1" dangerouslySetInnerHTML={{ __html: syntaxHighlight(addedLines[j]) }} />
+                        <div className={cn("whitespace-pre flex-1", theme.mode === 'light' ? "text-slate-700" : "text-slate-300")} dangerouslySetInnerHTML={{ __html: syntaxHighlight(addedLines[j], theme.mode === 'light') }} />
                       </div>
                     );
                   }
@@ -373,7 +388,8 @@ export function DiffViewer({ oldValue, newValue, className, viewMode = 'inline',
                   
                   rows.push(
                     <div key={`${i}-${j}`} className={cn(
-                      "flex px-2 py-0.5 hover:bg-slate-800/50 transition-colors items-center",
+                      "flex px-2 py-0.5 transition-colors items-center",
+                      theme.mode === 'light' ? "hover:bg-slate-200/50" : "hover:bg-slate-800/50",
                       isAdded ? "bg-emerald-500/20" :
                       isRemoved ? "bg-rose-500/20" : "",
                       isActive && !isAdded && !isRemoved && "bg-cyan-900/30"
@@ -398,7 +414,7 @@ export function DiffViewer({ oldValue, newValue, className, viewMode = 'inline',
                         </button>
                       )}
                       {!path && onChartClick && <div className="w-3.5 h-3.5 mr-2 shrink-0" />}
-                      <div className="whitespace-pre flex-1" dangerouslySetInnerHTML={{ __html: syntaxHighlight(line) }} />
+                      <div className={cn("whitespace-pre flex-1", theme.mode === 'light' ? "text-slate-700" : "text-slate-300")} dangerouslySetInnerHTML={{ __html: syntaxHighlight(line, theme.mode === 'light') }} />
                     </div>
                   );
                 });

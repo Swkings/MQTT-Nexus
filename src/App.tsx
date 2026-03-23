@@ -3,19 +3,60 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useMqtt } from './hooks/useMqtt';
 import { BrokerSidebar } from './components/BrokerSidebar';
 import { BrokerModal } from './components/BrokerModal';
-import { SubscriptionPanel } from './components/SubscriptionPanel';
 import { TopicTree } from './components/TopicTree';
 import { TopicView } from './components/TopicView';
-import { Activity, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Folder, FolderOpen, Palette } from 'lucide-react';
+import { Activity, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Folder, FolderOpen, Sun, Moon, Palette, Layers } from 'lucide-react';
 import { BrokerConfig, SavedHost, SavedCredential } from './types';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from './lib/utils';
+import { loadTheme, saveTheme, ThemeConfig, getThemeClasses } from './lib/theme';
+import { ThemeProvider } from './contexts/ThemeContext';
+import { MQTTClientPrefix } from './etc/config';
 
 export default function App() {
+  // Theme states - 移到最前面
+  const [theme, setTheme] = useState<ThemeConfig>(() => loadTheme());
+  const [showThemeMenu, setShowThemeMenu] = useState(false);
+  const themeMenuRef = useRef<HTMLDivElement>(null);
+
+  // Close theme menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (themeMenuRef.current && !themeMenuRef.current.contains(e.target as Node)) {
+        setShowThemeMenu(false);
+      }
+    };
+
+    if (showThemeMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showThemeMenu]);
+
+  useEffect(() => {
+    saveTheme(theme);
+  }, [theme]);
+
+  const themeClasses = useMemo(() => 
+    getThemeClasses(theme.mode, theme.overlay), 
+    [theme]
+  );
+
+  const handleThemeChange = (mode: 'dark' | 'light') => {
+    setTheme(prev => ({ ...prev, mode }));
+  };
+
+  const handleOverlayToggle = () => {
+    setTheme(prev => ({ 
+      ...prev, 
+      overlay: prev.overlay === 'opaque' ? 'transparent' : 'opaque' 
+    }));
+  };
+
   const {
     status,
     errorMsg,
@@ -68,7 +109,7 @@ export default function App() {
       host: 'broker.emqx.io',
       port: 8083,
       path: '/mqtt',
-      clientId: `mqttjs_${Math.random().toString(16).substr(2, 8)}`,
+      clientId: `${MQTTClientPrefix}${Math.random().toString(16).substr(2, 8)}`,
       subscriptions: ['#']
     }];
   });
@@ -89,19 +130,27 @@ export default function App() {
   const [isTopicTreeOpen, setIsTopicTreeOpen] = useState(true);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingBroker, setEditingBroker] = useState<BrokerConfig | null>(null);
-  const [isTransparentTheme, setIsTransparentTheme] = useState(false);
+  
+  // Favorite topics management - lifted to App level
+  const [favoriteTopics, setFavoriteTopics] = useState<string[]>(() => {
+    const saved = localStorage.getItem('mqtt_favorite_topics');
+    return saved ? JSON.parse(saved) : [];
+  });
 
   useEffect(() => {
-    localStorage.setItem('mqtt_brokers', JSON.stringify(brokers));
-  }, [brokers]);
+    localStorage.setItem('mqtt_favorite_topics', JSON.stringify(favoriteTopics));
+  }, [favoriteTopics]);
 
-  useEffect(() => {
-    localStorage.setItem('mqtt_saved_hosts', JSON.stringify(savedHosts));
-  }, [savedHosts]);
-
-  useEffect(() => {
-    localStorage.setItem('mqtt_saved_credentials', JSON.stringify(savedCredentials));
-  }, [savedCredentials]);
+  const handleAddToFavorites = (topic: string, isWildcard: boolean = false) => {
+    // Determine the actual topic path to add
+    const topicToAdd = isWildcard ? `${topic}/#` : topic;
+    
+    if (!favoriteTopics.includes(topicToAdd)) {
+      setFavoriteTopics(prev => [...prev, topicToAdd]);
+      // Also subscribe immediately
+      subscribe(topicToAdd, 2);
+    }
+  };
 
   const topics = useMemo(() => Object.keys(messageCounts), [messageCounts]);
 
@@ -182,10 +231,14 @@ export default function App() {
 
   const handleSelectBroker = (broker: BrokerConfig) => {
     const url = broker.url || `${broker.protocol}://${broker.host}:${broker.port}${broker.path}`;
+    
     if (activeBrokerId === broker.id) {
+      // 点击当前选中的 broker
       if (status === 'connected' || status === 'connecting') {
+        // 如果已连接或正在连接，则断开
         disconnect();
       } else {
+        // 否则重新连接
         connect(url, {
           clientId: broker.clientId,
           username: broker.username,
@@ -194,10 +247,13 @@ export default function App() {
         });
       }
     } else {
-      disconnect();
+      // 切换到不同的 broker
+      // 先清理消息和主题
       clearMessages();
       setSelectedTopic(null);
       setActiveBrokerId(broker.id);
+      
+      // 直接连接（disconnect 会在 connect 内部处理）
       connect(url, {
         clientId: broker.clientId,
         username: broker.username,
@@ -218,58 +274,155 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-300 font-sans selection:bg-cyan-500/30">
-      {/* Background Effects */}
+    <ThemeProvider theme={theme} setTheme={setTheme}>
       <div className={cn(
-        "fixed inset-0 z-0 pointer-events-none overflow-hidden transition-opacity duration-300",
-        isTransparentTheme ? "opacity-30" : "opacity-100"
-      )}>
-        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-cyan-500/10 blur-[120px]" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-purple-500/10 blur-[120px]" />
+        "min-h-screen font-sans selection:bg-cyan-500/30 transition-colors duration-300",
+        themeClasses.text
+      )}
+      style={{
+        backgroundColor: theme.mode === 'light' ? '#f8fafc' : '#020617'
+      }}>
+        {/* Background Effects - 透明模式下完全隐藏背景装饰 */}
+        <div className={cn(
+          "fixed inset-0 z-0 pointer-events-none overflow-hidden transition-opacity duration-300",
+          theme.overlay === 'transparent' ? "opacity-0" : "opacity-100"
+        )}>
+          <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-cyan-500/10 blur-[120px]" />
+          <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-purple-500/10 blur-[120px]" />
       </div>
 
       <div className={cn(
-        "relative z-10 mx-auto p-4 sm:p-6 lg:p-8 min-h-screen lg:h-screen flex flex-col max-w-[1800px] transition-all duration-300",
-        isTransparentTheme 
-          ? "bg-transparent" 
-          : ""
+        "relative z-10 mx-auto p-4 sm:p-6 lg:p-8 min-h-screen lg:h-screen flex flex-col max-w-[1800px] transition-all duration-300"
       )}>
         {/* Header */}
         <header className="flex-shrink-0 flex items-center justify-between mb-6 lg:mb-8">
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-3">
               <div className={cn(
-                "relative flex items-center justify-center w-10 h-10 rounded-xl shadow-lg",
-                isTransparentTheme 
-                  ? "bg-gradient-to-br from-cyan-500/80 to-purple-600/80 backdrop-blur-xl shadow-cyan-500/10" 
-                  : "bg-gradient-to-br from-cyan-500 to-purple-600 shadow-cyan-500/20"
+                "relative flex items-center justify-center w-10 h-10 rounded-xl shadow-lg transition-all duration-300",
+                themeClasses.logoGradient,
+                theme.overlay === 'transparent' ? 'backdrop-blur-xl shadow-cyan-500/10' : 'shadow-cyan-500/20'
               )}>
                 <Activity className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-slate-100 tracking-tight">MQTT Nexus</h1>
-                <p className="text-xs text-slate-400 font-mono tracking-wider uppercase">Real-time Telemetry</p>
+                <h1 className={cn("text-2xl font-bold tracking-tight", themeClasses.textPrimary, themeClasses.textShadow)}>MQTT Nexus</h1>
+                <p className={cn("text-xs font-mono tracking-wider uppercase", themeClasses.textSecondary, themeClasses.textShadow)}>Real-time Telemetry</p>
               </div>
             </div>
           </div>
 
           <div className="flex items-center gap-4">
-            {/* Theme Toggle */}
-            <button
-              onClick={() => setIsTransparentTheme(!isTransparentTheme)}
-              className={cn(
-                "p-2 rounded-xl border transition-colors flex items-center gap-2",
-                isTransparentTheme
-                  ? "bg-purple-500/20 border-purple-500/50 text-purple-400 hover:bg-purple-500/30"
-                  : "bg-slate-800/50 border-slate-700/50 text-slate-400 hover:text-purple-400 hover:bg-slate-700/50"
-              )}
-              title={isTransparentTheme ? "Disable Transparent Theme" : "Enable Transparent Theme"}
-            >
-              <Palette className="w-5 h-5" />
-              <span className="text-xs font-medium hidden sm:inline">
-                {isTransparentTheme ? "Transparent" : "Theme"}
-              </span>
-            </button>
+            {/* Theme Toggle Button */}
+            <div className="relative" ref={themeMenuRef}>
+              <button
+                onClick={() => setShowThemeMenu(!showThemeMenu)}
+                className={cn(
+                  "p-2 rounded-xl border transition-colors flex items-center gap-2",
+                  themeClasses.cardBg,
+                  themeClasses.border,
+                  themeClasses.text,
+                  theme.mode === 'light' ? "hover:bg-slate-200" : "hover:bg-slate-700/50"
+                )}
+                title="Theme Settings"
+              >
+                <Palette className="w-5 h-5" />
+                <span className="text-xs font-medium hidden sm:inline">
+                  Theme
+                </span>
+              </button>
+
+              {/* Theme Menu */}
+              <AnimatePresence>
+                {showThemeMenu && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                    className={cn(
+                      "absolute right-0 mt-2 w-64 rounded-xl border shadow-lg overflow-hidden z-50",
+                      themeClasses.cardBg,
+                      themeClasses.border,
+                      themeClasses.backdropBlur
+                    )}
+                  >
+                    {/* Theme Mode */}
+                    <div className={cn("p-3 border-b", themeClasses.border)}>
+                      <h4 className={cn("text-sm font-medium mb-2", themeClasses.textPrimary, themeClasses.textShadow)}>Theme Mode</h4>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleThemeChange('dark')}
+                          className={cn(
+                            "flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg border transition-colors",
+                            theme.mode === 'dark'
+                              ? "bg-cyan-500/20 border-cyan-500/50 text-cyan-400"
+                              : cn(themeClasses.cardBg, themeClasses.border, themeClasses.text, themeClasses.textShadow, "hover:bg-slate-700/50")
+                          )}
+                        >
+                          <Moon className="w-4 h-4" />
+                          <span className="text-xs font-medium">Dark</span>
+                        </button>
+                        <button
+                          onClick={() => handleThemeChange('light')}
+                          className={cn(
+                            "flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg border transition-colors",
+                            theme.mode === 'light'
+                              ? "bg-cyan-500/20 border-cyan-500/50 text-cyan-400"
+                              : cn(themeClasses.cardBg, themeClasses.border, themeClasses.text, themeClasses.textShadow, "hover:bg-slate-700/50")
+                          )}
+                        >
+                          <Sun className="w-4 h-4" />
+                          <span className="text-xs font-medium">Light</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Overlay Toggle */}
+                    <div className="p-3">
+                      <h4 className={cn("text-sm font-medium mb-2", themeClasses.textPrimary, themeClasses.textShadow)}>Overlay</h4>
+                      <button
+                        onClick={handleOverlayToggle}
+                        className={cn(
+                          "w-full flex items-center justify-between px-3 py-2 rounded-lg border transition-colors",
+                          theme.overlay === 'transparent'
+                            ? "bg-purple-500/20 border-purple-500/50 text-purple-400"
+                            : cn(themeClasses.cardBg, themeClasses.border, themeClasses.text, themeClasses.textShadow, "hover:bg-slate-700/50")
+                        )}
+                      >
+                        <div className="flex items-center gap-2">
+                          <Layers className="w-4 h-4" />
+                          <span className={cn("text-xs font-medium", themeClasses.textShadow)}>Transparent Background</span>
+                        </div>
+                        <div className={cn(
+                          "w-8 h-5 rounded-full relative transition-colors",
+                          theme.overlay === 'transparent' ? "bg-purple-500" : "bg-slate-600"
+                        )}>
+                          <div className={cn(
+                            "absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform",
+                            theme.overlay === 'transparent' ? "left-3.5" : "left-0.5"
+                          )} />
+                        </div>
+                      </button>
+                    </div>
+
+                    {/* Close button */}
+                    <div className="p-2 border-t border-slate-700/50">
+                      <button
+                        onClick={() => setShowThemeMenu(false)}
+                        className={cn(
+                          "w-full px-3 py-1.5 rounded-lg text-xs font-medium transition-colors",
+                          themeClasses.textSecondary,
+                          themeClasses.textShadow,
+                          "hover:bg-slate-700/50 hover:text-slate-300"
+                        )}
+                      >
+                        Close
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           </div>
         </header>
 
@@ -279,8 +432,7 @@ export default function App() {
           className={cn(
             "fixed left-0 top-1/2 -translate-y-1/2 z-50",
             "p-2 rounded-r-xl rounded-l-none",
-            "bg-slate-800/80 backdrop-blur-sm border border-l-0 border-slate-700/50",
-            "text-slate-400 hover:text-cyan-400 hover:bg-slate-700/80",
+            theme.mode === 'light' ? "bg-slate-100 border-slate-300 text-slate-500 hover:text-cyan-600 hover:bg-slate-200" : "bg-slate-800/80 border border-l-0 border-slate-700/50 text-slate-400 hover:text-cyan-400 hover:bg-slate-700/80",
             "transition-all duration-200 shadow-lg",
             isLeftSidebarOpen ? "opacity-0 hover:opacity-100" : "opacity-100"
           )}
@@ -295,8 +447,7 @@ export default function App() {
           className={cn(
             "fixed left-0 top-[calc(50%+60px)] -translate-y-1/2 z-50",
             "p-2 rounded-r-xl rounded-l-none",
-            "bg-slate-800/80 backdrop-blur-sm border border-l-0 border-slate-700/50",
-            "text-slate-400 hover:text-purple-400 hover:bg-slate-700/80",
+            theme.mode === 'light' ? "bg-slate-100 border-slate-300 text-slate-500 hover:text-purple-600 hover:bg-slate-200" : "bg-slate-800/80 border border-l-0 border-slate-700/50 text-slate-400 hover:text-purple-400 hover:bg-slate-700/80",
             "transition-all duration-200 shadow-lg",
             isTopicTreeOpen ? "opacity-0 hover:opacity-100" : "opacity-100"
           )}
@@ -325,23 +476,17 @@ export default function App() {
                       activeBrokerId={activeBrokerId}
                       status={status}
                       errorMsg={errorMsg}
+                      subscriptions={subscriptions}
                       onSelect={handleSelectBroker}
                       onAdd={openAddModal}
                       onEdit={openEditModal}
                       onDelete={handleDeleteBroker}
-                      isCollapsed={!isLeftSidebarOpen}
-                      onToggleCollapse={() => setIsLeftSidebarOpen(!isLeftSidebarOpen)}
-                    />
-                  </div>
-                  
-                  <div className="shrink-0">
-                    <SubscriptionPanel
-                      status={status}
-                      subscriptions={subscriptions}
                       onSubscribe={handleSubscribe}
                       onUnsubscribe={handleUnsubscribe}
-                      messageLimit={messageLimit}
-                      setMessageLimit={setMessageLimit}
+                      favoriteTopics={favoriteTopics}
+                      setFavoriteTopics={setFavoriteTopics}
+                      isCollapsed={!isLeftSidebarOpen}
+                      onToggleCollapse={() => setIsLeftSidebarOpen(!isLeftSidebarOpen)}
                     />
                   </div>
                 </div>
@@ -365,6 +510,7 @@ export default function App() {
                     messageCounts={messageCounts} 
                     selectedTopic={selectedTopic} 
                     onSelectTopic={setSelectedTopic}
+                    onAddToFavorites={handleAddToFavorites}
                     isCollapsed={!isTopicTreeOpen}
                     onToggleCollapse={() => setIsTopicTreeOpen(!isTopicTreeOpen)}
                   />
@@ -397,6 +543,7 @@ export default function App() {
         onDeleteCredential={(id) => setSavedCredentials(prev => prev.filter(c => c.id !== id))}
       />
     </div>
+    </ThemeProvider>
   );
 }
 

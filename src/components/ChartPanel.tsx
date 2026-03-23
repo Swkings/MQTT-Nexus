@@ -13,6 +13,7 @@ import {
 } from 'recharts';
 import { X, TrendingUp } from 'lucide-react';
 import { cn } from '../lib/utils';
+import { useTheme } from '../contexts/ThemeContext';
 
 interface ChartPanelProps {
   data: any[];
@@ -23,6 +24,7 @@ interface ChartPanelProps {
 }
 
 export function ChartPanel({ data, path, onClose, compact = false, isPaused = false }: ChartPanelProps) {
+  const { theme } = useTheme();
   const [now, setNow] = React.useState(Date.now());
   const [frozenNow, setFrozenNow] = React.useState<number | null>(null);
 
@@ -105,10 +107,11 @@ export function ChartPanel({ data, path, onClose, compact = false, isPaused = fa
 
   return (
     <div className={cn(
-      "border-slate-700/50 bg-slate-900/50 flex flex-col shrink-0",
-      compact ? "h-56" : "h-64 border-t"
+      "flex flex-col shrink-0 border",
+      compact ? "h-56" : "h-64 border-t",
+      theme.mode === 'light' ? "bg-slate-100 border-slate-300" : "bg-slate-900/50 border-slate-700/50"
     )}>
-      <div className="flex items-center justify-between px-4 py-2 border-b border-slate-700/50 bg-slate-800/50">
+      <div className={cn("flex items-center justify-between px-4 py-2 border-b", theme.mode === 'light' ? "border-slate-300 bg-slate-200/50" : "border-slate-700/50 bg-slate-800/50")}>
         <div className="flex items-center gap-2 text-sm font-medium text-slate-300 overflow-hidden">
           <TrendingUp className="w-4 h-4 text-cyan-400 shrink-0" />
           <span className="truncate">Monitoring: <span className="text-cyan-300 font-mono">{path}</span></span>
