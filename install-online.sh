@@ -48,9 +48,107 @@ step() {
 # -----------------------------------------------------------------------------
 # 配置
 # -----------------------------------------------------------------------------
-REPO_URL="https://github.com/Swkings/MQTT-Nexus.git"
-BRANCH="develop"
+REPO_URL="https://github.com/your-org/MQTT-Nexus.git"
+BRANCH="main"
 INSTALL_DIR="./mqtt-nexus"
+BUILD_ELECTRON=true  # ✅ 默认构建 Electron 桌面应用
+
+# -----------------------------------------------------------------------------
+# 构建 Electron 应用
+# -----------------------------------------------------------------------------
+build_electron() {
+    step "Building Electron desktop application..."
+    
+    cd "$INSTALL_DIR"
+    
+    info "Compiling Electron TypeScript..."
+    npx tsc -p electron/tsconfig.json
+    
+    if [ $? -ne 0 ]; then
+        error "Failed to compile Electron"
+    fi
+    
+    info "Building Electron package for current platform..."
+    if [ "$OS" == "linux" ]; then
+        npm run electron:build:linux
+    elif [ "$OS" == "macos" ]; then
+        npm run electron:build:mac
+    elif [ "$OS" == "windows" ]; then
+        npm run electron:build:win
+    else
+        npm run electron:build
+    fi
+    
+    if [ $? -eq 0 ]; then
+        success "Electron application built successfully!"
+        info "Installer location: $INSTALL_DIR/release/"
+    else
+        error "Failed to build Electron package"
+    fi
+    
+    cd ..
+}
+
+# -----------------------------------------------------------------------------
+# 显示完成信息
+# -----------------------------------------------------------------------------
+show_completion() {
+    echo -e "\n${GREEN}╔════════════════════════════════════════════════════════╗${NC}"
+    echo -e "${GREEN}║          MQTT-Nexus Installation Complete! 🎉           ║${NC}"
+    echo -e "${GREEN}╚════════════════════════════════════════════════════════╝${NC}\n"
+    
+    info "Application installed in: $(pwd)/$INSTALL_DIR"
+    
+    if [ "$BUILD_ELECTRON" = true ]; then
+        info "Desktop application built successfully!"
+        info "Installers are available in: $INSTALL_DIR/release/"
+        echo -e "\n${CYAN}Quick Start:${NC}"
+        echo -e "  cd $INSTALL_DIR"
+        echo -e "  ${YELLOW}Run Desktop App:${NC}    ./release/MQTT-Nexus[version].[ext]"
+        echo -e "  ${YELLOW}Development Mode:${NC}   npm run electron:dev"
+        echo -e "  ${YELLOW}Rebuild App:${NC}        npm run electron:build"
+    else
+        info "Web application built successfully!"
+        echo -e "\n${CYAN}Quick Start:${NC}"
+        echo -e "  cd $INSTALL_DIR"
+        echo -e "  ${YELLOW}npm run dev${NC}              # Start development server"
+        echo -e "  ${YELLOW}npm run build${NC}            # Build for production"
+        echo -e "  ${YELLOW}npm run electron:build${NC}   # Build desktop app"
+    fi
+    
+    echo -e "\n${CYAN}Documentation:${NC}"
+    echo -e "  Check README.md for more information"
+    echo -e "  Environment config: $INSTALL_DIR/.env.local"
+    
+    echo -e "\n${GREEN}Happy coding! 🚀${NC}\n"
+}
+
+# -----------------------------------------------------------------------------
+# 显示使用说明
+# -----------------------------------------------------------------------------
+show_usage() {
+    echo "MQTT-Nexus Online Installation Script"
+    echo ""
+    echo "Usage: curl -fsSL <script-url> | bash"
+    echo ""
+    echo "Options:"
+    echo "  --no-electron     Skip Electron desktop application build (web only)"
+    echo "  --help            Show this help message"
+    echo ""
+    echo "Examples:"
+    echo "  # Install with Electron desktop app (default)"
+    echo "  curl -fsSL https://raw.githubusercontent.com/your-org/MQTT-Nexus/main/install-online.sh | bash"
+    echo ""
+    echo "  # Install web version only"
+    echo "  curl -fsSL https://raw.githubusercontent.com/your-org/MQTT-Nexus/main/install-online.sh | bash -s -- --no-electron"
+    echo ""
+    echo "Requirements:"
+    echo "  - Node.js >= 18.x"
+    echo "  - npm >= 9.x"
+    echo "  - Git"
+    echo "  - curl or wget"
+    echo ""
+}
 
 # -----------------------------------------------------------------------------
 # 检测操作系统
@@ -202,62 +300,6 @@ build_app() {
 }
 
 # -----------------------------------------------------------------------------
-# 显示完成信息
-# -----------------------------------------------------------------------------
-show_completion() {
-    echo -e "\n${GREEN}╔════════════════════════════════════════════════════════╗${NC}"
-    echo -e "${GREEN}║          MQTT-Nexus Installation Complete! 🎉           ║${NC}"
-    echo -e "${GREEN}╚════════════════════════════════════════════════════════╝${NC}\n"
-    
-    info "Application installed in: $(pwd)/$INSTALL_DIR"
-    info "Web application built successfully!"
-    
-    echo -e "\n${CYAN}Quick Start:${NC}"
-    echo -e "  cd $INSTALL_DIR"
-    echo -e "  ${YELLOW}npm run dev${NC}              # Start development server"
-    echo -e "  ${YELLOW}npm run build${NC}            # Build for production"
-    echo -e "  ${YELLOW}npm run electron:dev${NC}     # Start Electron desktop app"
-    
-    echo -e "\n${CYAN}Documentation:${NC}"
-    echo -e "  Check README.md for more information"
-    echo -e "  Environment config: $INSTALL_DIR/.env.local"
-    
-    echo -e "\n${GREEN}Happy coding! 🚀${NC}\n"
-}
-
-# -----------------------------------------------------------------------------
-# 显示使用说明
-# -----------------------------------------------------------------------------
-show_usage() {
-    echo "MQTT-Nexus Online Installation Script"
-    echo ""
-    echo "Usage: curl -fsSL <script-url> | bash"
-    echo ""
-    echo "Options:"
-    echo "  --help          Show this help message"
-    echo ""
-    echo "Examples:"
-    echo "  # Install from main branch"
-    echo "  curl -fsSL https://raw.githubusercontent.com/Swkings/MQTT-Nexus/main/install-online.sh | bash"
-    echo ""
-    echo "  # Install from specific branch"
-    echo "  curl -fsSL https://raw.githubusercontent.com/Swkings/MQTT-Nexus/develop/install-online.sh | bash"
-    echo ""
-    echo "Requirements:"
-    echo "  - Node.js >= 18.x"
-    echo "  - npm >= 9.x"
-    echo "  - Git"
-    echo "  - curl or wget"
-    echo ""
-    echo "Alternative Installation Methods:"
-    echo "  # Clone and install manually"
-    echo "  git clone https://github.com/Swkings/MQTT-Nexus.git"
-    echo "  cd MQTT-Nexus"
-    echo "  ./install.sh"
-    echo ""
-}
-
-# -----------------------------------------------------------------------------
 # 主程序
 # -----------------------------------------------------------------------------
 main() {
@@ -269,6 +311,10 @@ main() {
     # 解析参数
     while [[ $# -gt 0 ]]; do
         case $1 in
+            --no-electron)
+                BUILD_ELECTRON=false
+                shift
+                ;;
             --help|-h)
                 show_usage
                 exit 0
@@ -296,6 +342,11 @@ main() {
     
     # 构建应用
     build_app
+    
+    # 构建 Electron 应用
+    if [ "$BUILD_ELECTRON" = true ]; then
+        build_electron
+    fi
     
     # 显示完成信息
     show_completion

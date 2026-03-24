@@ -166,19 +166,20 @@ echo.
 if "%BUILD_ELECTRON%"=="true" (
     call :info "Desktop application built successfully!"
     call :info "Installers are available in: .\release\"
+    echo.
+    echo %CYAN%!%NC% Quick Start:
+    echo   %YELLOW%!%NC% Run Desktop App:    .\release\MQTT-Nexus[version].[ext]
+    echo   %YELLOW%!%NC% Development Mode:   npm run electron:dev
+    echo   %YELLOW%!%NC% Rebuild App:        npm run electron:build
 ) else (
     call :info "Web application built successfully!"
     call :info "To run development server: npm run dev"
-    call :info "To build for production: npm run build"
     call :info "To build Electron app: npm run electron:build"
-)
-
-echo.
-echo %CYAN%!%NC% Quick Start:
-echo   %YELLOW%!%NC% Development:   npm run dev
-echo   %YELLOW%!%NC% Production:    npm run build ^&^& npm run preview
-if not "%BUILD_ELECTRON%"=="true" (
-    echo   %YELLOW%!%NC% Desktop App:  npm run electron:dev
+    echo.
+    echo %CYAN%!%NC% Quick Start:
+    echo   %YELLOW%!%NC% Development:   npm run dev
+    echo   %YELLOW%!%NC% Production:    npm run build ^&^& npm run preview
+    echo   %YELLOW%!%NC% Desktop App:   npm run electron:build
 )
 
 echo.
@@ -200,14 +201,14 @@ echo.
 echo Usage: install.bat [OPTIONS]
 echo.
 echo Options:
-echo   --skip-build    Skip the build step ^(only install dependencies^)
-echo   --electron      Build Electron desktop application after installation
-echo   --help          Show this help message
+echo   --skip-build      Skip the build step ^(only install dependencies^)
+echo   --no-electron     Skip Electron desktop application build ^(web only^)
+echo   --help            Show this help message
 echo.
 echo Examples:
-echo   install.bat                    Full installation with build
+echo   install.bat                    Full installation with Electron app ^(default^)
 echo   install.bat --skip-build       Only install dependencies
-echo   install.bat --electron         Build desktop application
+echo   install.bat --no-electron      Build web version only
 echo.
 echo Requirements:
 echo   - Node.js ^>= 18.x
@@ -228,12 +229,12 @@ echo.
 
 REM 解析参数
 set SKIP_BUILD=false
-set BUILD_ELECTRON=false
+set BUILD_ELECTRON=true  REM ✅ 默认构建 Electron 桌面应用
 
 :parse_args
 if "%~1"=="" goto :main
 if /i "%~1"=="--skip-build" set SKIP_BUILD=true & shift & goto :parse_args
-if /i "%~1"=="--electron" set BUILD_ELECTRON=true & shift & goto :parse_args
+if /i "%~1"=="--no-electron" set BUILD_ELECTRON=false & shift & goto :parse_args
 if /i "%~1"=="--help" call :show_usage & exit /b 0
 call :error "Unknown option: %~1. Use --help for usage information."
 
@@ -251,7 +252,7 @@ REM 构建应用
 if "%SKIP_BUILD%"=="false" (
     call :build_app
     
-    REM 构建 Electron（如果指定）
+    REM 构建 Electron（默认执行）
     if "%BUILD_ELECTRON%"=="true" (
         call :build_electron
     )

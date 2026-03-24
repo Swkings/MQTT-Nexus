@@ -4,15 +4,50 @@
 # 描述：通过 PowerShell 直接下载并安装 MQTT-Nexus 应用
 # 支持：Windows (PowerShell 5.1+ / PowerShell 7+)
 # 要求：Node.js >= 18.x, npm >= 9.x, Git
-# 用法：powershell -Command "iwr -UseBasicParsing https://raw.githubusercontent.com/Swkings/MQTT-Nexus/develop/install-online.ps1 | iex"
+# 用法：powershell -Command "iwr -UseBasicParsing https://raw.githubusercontent.com/your-org/MQTT-Nexus/main/install-online.ps1 | iex"
 # =============================================================================
 
 # -----------------------------------------------------------------------------
 # 配置
 # -----------------------------------------------------------------------------
-$RepoUrl = "https://github.com/Swkings/MQTT-Nexus.git"
-$Branch = "develop"
+$RepoUrl = "https://github.com/your-org/MQTT-Nexus.git"
+$Branch = "main"
 $InstallDir = ".\mqtt-nexus"
+$BuildElectron = $true  # ✅ 默认构建 Electron 桌面应用
+
+# -----------------------------------------------------------------------------
+# 构建 Electron 应用
+# -----------------------------------------------------------------------------
+function Build-Electron {
+    Write-Step "Building Electron desktop application..."
+    
+    Set-Location $InstallDir
+    
+    Write-Info "Compiling Electron TypeScript..."
+    try {
+        npx tsc -p electron/tsconfig.json 2>&1
+        if ($LASTEXITCODE -ne 0) {
+            throw "Electron compilation failed"
+        }
+    } catch {
+        Write-Error "Failed to compile Electron"
+    }
+    
+    Write-Info "Building Electron package for Windows..."
+    try {
+        npm run electron:build:win 2>&1
+        if ($LASTEXITCODE -eq 0) {
+            Write-Success "Electron application built successfully!"
+            Write-Info "Installer location: $InstallDir\release\"
+        } else {
+            throw "Electron build failed"
+        }
+    } catch {
+        Write-Error "Failed to build Electron package"
+    }
+    
+    Set-Location ..
+}
 
 # -----------------------------------------------------------------------------
 # 颜色输出函数
@@ -188,6 +223,13 @@ try {
 Set-Location ..
 
 # -----------------------------------------------------------------------------
+# 构建 Electron 应用（默认执行）
+# -----------------------------------------------------------------------------
+if ($BuildElectron) {
+    Build-Electron
+}
+
+# -----------------------------------------------------------------------------
 # 显示完成信息
 # -----------------------------------------------------------------------------
 Write-Host ""
@@ -197,14 +239,25 @@ Write-Host "╚═════════════════════�
 Write-Host ""
 
 Write-Info "Application installed in: $(Get-Location)\$InstallDir"
-Write-Info "Web application built successfully!"
 
-Write-Host ""
-Write-Host "Quick Start:" -ForegroundColor Cyan
-Write-Host "  cd $InstallDir"
-Write-Host "  npm run dev              # Start development server" -ForegroundColor Yellow
-Write-Host "  npm run build            # Build for production" -ForegroundColor Yellow
-Write-Host "  npm run electron:dev     # Start Electron desktop app" -ForegroundColor Yellow
+if ($BuildElectron) {
+    Write-Info "Desktop application built successfully!"
+    Write-Info "Installers are available in: $InstallDir\release\"
+    Write-Host ""
+    Write-Host "Quick Start:" -ForegroundColor Cyan
+    Write-Host "  cd $InstallDir"
+    Write-Host "  Run Desktop App:    .\release\MQTT-Nexus[version].[ext]" -ForegroundColor Yellow
+    Write-Host "  Development Mode:   npm run electron:dev" -ForegroundColor Yellow
+    Write-Host "  Rebuild App:        npm run electron:build" -ForegroundColor Yellow
+} else {
+    Write-Info "Web application built successfully!"
+    Write-Host ""
+    Write-Host "Quick Start:" -ForegroundColor Cyan
+    Write-Host "  cd $InstallDir"
+    Write-Host "  npm run dev              # Start development server" -ForegroundColor Yellow
+    Write-Host "  npm run build            # Build for production" -ForegroundColor Yellow
+    Write-Host "  npm run electron:build   # Build desktop app" -ForegroundColor Yellow
+}
 
 Write-Host ""
 Write-Host "Documentation:" -ForegroundColor Cyan

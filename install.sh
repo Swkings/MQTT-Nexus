@@ -172,18 +172,18 @@ show_completion() {
     if [ "$BUILD_ELECTRON" = true ]; then
         info "Desktop application built successfully!"
         info "Installers are available in: ./release/"
+        echo -e "\n${CYAN}Quick Start:${NC}"
+        echo -e "  ${YELLOW}Run Desktop App:${NC}    ./release/MQTT-Nexus[version].[ext]"
+        echo -e "  ${YELLOW}Development Mode:${NC}   npm run electron:dev"
+        echo -e "  ${YELLOW}Rebuild App:${NC}        npm run electron:build"
     else
         info "Web application built successfully!"
         info "To run development server: npm run dev"
-        info "To build for production: npm run build"
         info "To build Electron app: npm run electron:build"
-    fi
-    
-    echo -e "\n${CYAN}Quick Start:${NC}"
-    echo -e "  ${YELLOW}Development:${NC}   npm run dev"
-    echo -e "  ${YELLOW}Production:${NC}    npm run build && npm run preview"
-    if [ "$BUILD_ELECTRON" = false ]; then
-        echo -e "  ${YELLOW}Desktop App:${NC}  npm run electron:dev"
+        echo -e "\n${CYAN}Quick Start:${NC}"
+        echo -e "  ${YELLOW}Development:${NC}   npm run dev"
+        echo -e "  ${YELLOW}Production:${NC}    npm run build && npm run preview"
+        echo -e "  ${YELLOW}Desktop App:${NC}   npm run electron:build"
     fi
     
     echo -e "\n${CYAN}Documentation:${NC}"
@@ -202,14 +202,14 @@ show_usage() {
     echo "Usage: ./install.sh [OPTIONS]"
     echo ""
     echo "Options:"
-    echo "  --skip-build    Skip the build step (only install dependencies)"
-    echo "  --electron      Build Electron desktop application after installation"
-    echo "  --help          Show this help message"
+    echo "  --skip-build      Skip the build step (only install dependencies)"
+    echo "  --no-electron     Skip Electron desktop application build (web only)"
+    echo "  --help            Show this help message"
     echo ""
     echo "Examples:"
-    echo "  ./install.sh                    # Full installation with build"
+    echo "  ./install.sh                    # Full installation with Electron app (default)"
     echo "  ./install.sh --skip-build       # Only install dependencies"
-    echo "  ./install.sh --electron         # Build desktop application"
+    echo "  ./install.sh --no-electron      # Build web version only"
     echo ""
     echo "Requirements:"
     echo "  - Node.js >= 18.x"
@@ -229,7 +229,7 @@ main() {
     
     # 解析参数
     SKIP_BUILD=false
-    BUILD_ELECTRON=false
+    BUILD_ELECTRON=true  # ✅ 默认构建 Electron 桌面应用
     
     while [[ $# -gt 0 ]]; do
         case $1 in
@@ -237,8 +237,8 @@ main() {
                 SKIP_BUILD=true
                 shift
                 ;;
-            --electron)
-                BUILD_ELECTRON=true
+            --no-electron)  # ✅ 修改为 --no-electron 表示不构建 Electron
+                BUILD_ELECTRON=false
                 shift
                 ;;
             --help|-h)
@@ -267,7 +267,7 @@ main() {
     if [ "$SKIP_BUILD" = false ]; then
         build_app
         
-        # 构建 Electron（如果指定）
+        # 构建 Electron（默认执行）
         if [ "$BUILD_ELECTRON" = true ]; then
             build_electron
         fi
