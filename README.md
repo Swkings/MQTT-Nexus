@@ -60,9 +60,19 @@ wget -qO- https://raw.githubusercontent.com/your-org/MQTT-Nexus/main/install-onl
 ```
 
 **Windows (PowerShell):**
-```powershell
-# Install from main branch
-powershell -Command "iwr -UseBasicParsing https://raw.githubusercontent.com/your-org/MQTT-Nexus/main/install-online.bat | iex"
+```
+# Install from main branch (PowerShell 5.1+ or PowerShell 7+)
+powershell -Command "iwr -UseBasicParsing https://raw.githubusercontent.com/your-org/MQTT-Nexus/main/install-online.ps1 | iex"
+
+# Or download and run manually
+# 1. Download the script
+iwr -UseBasicParsing https://raw.githubusercontent.com/your-org/MQTT-Nexus/main/install-online.ps1 -OutFile install-online.ps1
+
+# 2. Run the script
+.\install-online.ps1
+```
+
+**Note**: The `.bat` version is for CMD only. For PowerShell, use the `.ps1` version.
 ```
 
 #### 📦 Clone and Install

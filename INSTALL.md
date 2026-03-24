@@ -59,13 +59,19 @@ curl -fsSL https://raw.githubusercontent.com/your-org/MQTT-Nexus/develop/install
 
 #### Windows (PowerShell)
 
-```powershell
-# 从 main 分支安装
-powershell -Command "iwr -UseBasicParsing https://raw.githubusercontent.com/your-org/MQTT-Nexus/main/install-online.bat | iex"
+``powershell
+# 从 main 分支安装（PowerShell 5.1+ 或 PowerShell 7+）
+powershell -Command "iwr -UseBasicParsing https://raw.githubusercontent.com/your-org/MQTT-Nexus/main/install-online.ps1 | iex"
 
-# 从特定分支安装
-powershell -Command "iwr -UseBasicParsing https://raw.githubusercontent.com/your-org/MQTT-Nexus/develop/install-online.bat | iex"
+# 或下载后手动运行
+# 1. 下载脚本
+iwr -UseBasicParsing https://raw.githubusercontent.com/your-org/MQTT-Nexus/main/install-online.ps1 -OutFile install-online.ps1
+
+# 2. 运行脚本
+.\install-online.ps1
 ```
+
+**注意**: `.bat` 版本仅适用于 CMD。PowerShell 请使用 `.ps1` 版本。
 
 **在线安装特点**:
 - ✅ 无需手动 clone 仓库
