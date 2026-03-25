@@ -5,7 +5,7 @@ REM ============================================================================
 REM 描述：通过 PowerShell 直接下载并安装 MQTT-Nexus 应用
 REM 支持：Windows (PowerShell/CMD)
 REM 要求：Node.js >= 18.x, npm >= 9.x, Git
-REM 用法：powershell -Command "iwr -UseBasicParsing https://raw.githubusercontent.com/Swkings/MQTT-Nexus/develop/install-online.bat | iex"
+REM 用法：powershell -Command "iwr -UseBasicParsing https://raw.githubusercontent.com/your-org/MQTT-Nexus/main/install-online.bat | iex"
 REM =============================================================================
 
 setlocal enabledelayedexpansion
@@ -23,8 +23,8 @@ set "NC=[0m"
 REM -----------------------------------------------------------------------------
 REM 配置
 REM -----------------------------------------------------------------------------
-set "REPO_URL=https://github.com/Swkings/MQTT-Nexus.git"
-set "BRANCH=develop"
+set "REPO_URL=https://github.com/your-org/MQTT-Nexus.git"
+set "BRANCH=main"
 set "INSTALL_DIR=mqtt-nexus"
 
 REM -----------------------------------------------------------------------------
@@ -226,11 +226,11 @@ echo Options:
 echo   --help          Show this help message
 echo.
 echo Examples:
-echo   REM Install from Swkings branch
-echo   powershell -Command "iwr -UseBasicParsing https://raw.githubusercontent.com/Swkings/MQTT-Nexus/main/install-online.bat ^| iex"
+echo   REM Install from main branch
+echo   powershell -Command "iwr -UseBasicParsing https://raw.githubusercontent.com/your-org/MQTT-Nexus/main/install-online.bat ^| iex"
 echo.
 echo   REM Install from specific branch
-echo   powershell -Command "iwr -UseBasicParsing https://raw.githubusercontent.com/Swkings/MQTT-Nexus/develop/install-online.bat ^| iex"
+echo   powershell -Command "iwr -UseBasicParsing https://raw.githubusercontent.com/your-org/MQTT-Nexus/develop/install-online.bat ^| iex"
 echo.
 echo Requirements:
 echo   - Node.js ^>= 18.x
@@ -239,7 +239,7 @@ echo   - Git
 echo.
 echo Alternative Installation Methods:
 echo   REM Clone and install manually
-echo   git clone https://github.com/Swkings/MQTT-Nexus.git
+echo   git clone https://github.com/your-org/MQTT-Nexus.git
 echo   cd MQTT-Nexus
 echo   install.bat
 echo.

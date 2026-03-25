@@ -26,6 +26,8 @@ function createWindow() {
     height: 900,
     minWidth: 1024,
     minHeight: 768,
+    frame: true,
+    titleBarStyle: 'hiddenInset', // macOS: 窄边框样式
     webPreferences: {
       preload: preloadPath,
       contextIsolation: true,
