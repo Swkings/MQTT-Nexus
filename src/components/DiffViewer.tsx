@@ -99,7 +99,7 @@ export function DiffViewer({ oldValue, newValue, className, viewMode = 'inline',
 
   if (viewMode === 'latest') {
     return (
-      <div className={cn("relative group font-mono text-xs flex flex-col rounded-md border", !noScroll && "overflow-hidden", className, theme.mode === 'light' ? "bg-slate-100 border-slate-300" : "bg-slate-900/50 border-slate-700/50")}>
+      <div className={cn("relative group font-mono text-xs flex flex-col rounded-md border", !noScroll && "overflow-hidden", className, theme.overlay === 'transparent' ? 'bg-transparent border-slate-700/30' : theme.mode === 'light' ? "bg-slate-100 border-slate-300" : "bg-slate-900/50 border-slate-700/50")}>
         <div className={cn(
           "z-20 pointer-events-none flex justify-end pr-2",
           noScroll ? "sticky top-2 h-0" : "absolute top-2 right-2 w-full"
@@ -150,7 +150,7 @@ export function DiffViewer({ oldValue, newValue, className, viewMode = 'inline',
     let newLineIdx = 0;
 
     return (
-      <div className={cn("relative group font-mono text-xs rounded-md flex flex-col border", !noScroll && "overflow-hidden", className, theme.mode === 'light' ? "bg-slate-100 border-slate-300" : "bg-slate-900/50 border-slate-700/50")}>
+      <div className={cn("relative group font-mono text-xs rounded-md flex flex-col border", !noScroll && "overflow-hidden", className, theme.overlay === 'transparent' ? 'bg-transparent border-slate-700/30' : theme.mode === 'light' ? "bg-slate-100 border-slate-300" : "bg-slate-900/50 border-slate-700/50")}>
         <div className={cn(
           "grid grid-cols-2 gap-4 text-xs font-sans font-medium border-b p-2 shrink-0",
           theme.mode === 'light' 
@@ -287,7 +287,7 @@ export function DiffViewer({ oldValue, newValue, className, viewMode = 'inline',
   let newLineIdx = 0;
 
   return (
-    <div className={cn("relative group font-mono text-xs flex flex-col rounded-md border", !noScroll && "overflow-hidden", className, theme.mode === 'light' ? "bg-slate-100 border-slate-300" : "bg-slate-900/50 border-slate-700/50")}>
+    <div className={cn("relative group font-mono text-xs rounded-md flex flex-col border", !noScroll && "overflow-hidden", className, theme.overlay === 'transparent' ? 'bg-transparent border-slate-700/30' : theme.mode === 'light' ? "bg-slate-100 border-slate-300" : "bg-slate-900/50 border-slate-700/50")}>
       <div className={cn(
         "z-20 pointer-events-none flex justify-end pr-2",
         noScroll ? "sticky top-2 h-0" : "absolute top-2 right-2 w-full"

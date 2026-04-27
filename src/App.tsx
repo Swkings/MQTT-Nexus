@@ -127,7 +127,8 @@ export default function App() {
   const [activeBrokerId, setActiveBrokerId] = useState<string | null>(null);
   
   const [isLeftSidebarOpen, setIsLeftSidebarOpen] = useState(true);
-  const [isTopicTreeOpen, setIsTopicTreeOpen] = useState(true);
+  const [isTopicTreeOpen, setIsTopicTreeOpen] = useState(false);  // 默认关闭
+  const [shouldAutoExpandTree, setShouldAutoExpandTree] = useState(false);  // 新增：控制自动展开
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingBroker, setEditingBroker] = useState<BrokerConfig | null>(null);
   
@@ -164,6 +165,11 @@ export default function App() {
         });
       } else {
         subscribe('#', 2);
+      }
+      // 连接成功后自动展开 Topic Tree
+      setShouldAutoExpandTree(true);
+      if (!isTopicTreeOpen) {
+        setIsTopicTreeOpen(true);
       }
     }
   }, [status, activeBrokerId]);
@@ -292,18 +298,31 @@ export default function App() {
       </div>
 
       <div className={cn(
-        "relative z-10 mx-auto p-4 sm:p-6 lg:p-8 min-h-screen lg:h-screen flex flex-col max-w-[1800px] transition-all duration-300"
+        "relative z-10 flex flex-col h-screen overflow-hidden"
       )}>
         {/* Header */}
         <header className="flex-shrink-0 flex items-center justify-between mb-6 lg:mb-8">
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-3">
               <div className={cn(
-                "relative flex items-center justify-center w-10 h-10 rounded-xl shadow-lg transition-all duration-300",
+                "relative flex items-center justify-center w-10 h-10 rounded-xl shadow-2xl transition-all duration-300",
                 themeClasses.logoGradient,
-                theme.overlay === 'transparent' ? 'backdrop-blur-xl shadow-cyan-500/10' : 'shadow-cyan-500/20'
+                theme.overlay === 'transparent' 
+                  ? 'backdrop-blur-xl shadow-black/30' 
+                  : theme.mode === 'light'
+                    ? 'shadow-cyan-500/30'
+                    : 'shadow-black/50'
               )}>
-                <Activity className="w-6 h-6 text-white" />
+                <Activity 
+                  className={cn(
+                    "w-6 h-6",
+                    theme.overlay === 'transparent' && theme.mode === 'light' 
+                      ? "text-cyan-700 drop-shadow-[0_2px_3px_rgba(0,0,0,0.5)]" 
+                      : theme.mode === 'light'
+                        ? "text-cyan-900 drop-shadow-[0_2px_3px_rgba(0,0,0,0.3)]"
+                        : "text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]"
+                  )} 
+                />
               </div>
               <div>
                 <h1 className={cn("text-2xl font-bold tracking-tight", themeClasses.textPrimary, themeClasses.textShadow)}>MQTT Nexus</h1>
@@ -457,19 +476,19 @@ export default function App() {
         </button>
 
         {/* Main Layout */}
-        <main className="flex-1 flex flex-col lg:flex-row min-h-0 pb-4 lg:pb-0 overflow-hidden">
+        <main className="flex-1 flex flex-col lg:flex-row min-h-0 overflow-hidden">
           
           {/* Left Sidebar: Connection & Subs */}
           <AnimatePresence initial={false}>
             {isLeftSidebarOpen && (
               <motion.div
                 initial={{ width: 0, opacity: 0, marginRight: 0 }}
-                animate={{ width: 320, opacity: 1, marginRight: 24 }}
+                animate={{ width: 320, opacity: 1, marginRight: 8 }}
                 exit={{ width: 0, opacity: 0, marginRight: 0 }}
                 transition={{ duration: 0.2, ease: "easeInOut" }}
-                className="shrink-0 h-full overflow-hidden flex flex-col gap-6"
+                className="shrink-0 h-full overflow-hidden flex flex-col gap-4"
               >
-                <div className="w-[320px] h-full flex flex-col gap-6 overflow-y-auto custom-scrollbar pb-2">
+                <div className="w-[320px] h-full flex flex-col gap-4 overflow-y-auto custom-scrollbar pb-2">
                   <div className="flex-1 min-h-[400px]">
                     <BrokerSidebar
                       brokers={brokers}
@@ -499,7 +518,7 @@ export default function App() {
             {isTopicTreeOpen && (
               <motion.div
                 initial={{ width: 0, opacity: 0, marginRight: 0 }}
-                animate={{ width: 320, opacity: 1, marginRight: 24 }}
+                animate={{ width: 320, opacity: 1, marginRight: 8 }}
                 exit={{ width: 0, opacity: 0, marginRight: 0 }}
                 transition={{ duration: 0.2, ease: "easeInOut" }}
                 className="shrink-0 h-full overflow-hidden flex flex-col"
@@ -513,6 +532,7 @@ export default function App() {
                     onAddToFavorites={handleAddToFavorites}
                     isCollapsed={!isTopicTreeOpen}
                     onToggleCollapse={() => setIsTopicTreeOpen(!isTopicTreeOpen)}
+                    autoExpand={shouldAutoExpandTree}
                   />
                 </div>
               </motion.div>
@@ -520,7 +540,7 @@ export default function App() {
           </AnimatePresence>
 
           {/* Main Content: Topic View */}
-          <div className="flex-1 flex flex-col h-[600px] lg:h-full min-w-0 pb-2">
+          <div className="flex-1 flex flex-col h-full min-w-0 overflow-hidden">
             <TopicView 
               topic={selectedTopic} 
               messages={messages} 

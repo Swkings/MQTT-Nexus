@@ -9,13 +9,41 @@ import { useTheme } from '../contexts/ThemeContext';
 
 function getAllPaths(obj: any, prefix = ''): string[] {
   let paths: string[] = [];
-  if (obj && typeof obj === 'object' && !Array.isArray(obj)) {
+  
+  if (Array.isArray(obj)) {
+    // Handle array - generate paths with index for each element
+    obj.forEach((item, index) => {
+      const path = prefix ? `${prefix}.${index}` : `${index}`;
+      if (item && typeof item === 'object') {
+        // Recursively get paths from array element, passing index as prefix
+        paths = paths.concat(getAllPaths(item, path));
+      } else {
+        // For primitive values in array, include the indexed path
+        paths.push(path);
+      }
+    });
+  } else if (obj && typeof obj === 'object') {
+    // Handle object - only add leaf paths
     for (const key in obj) {
       const path = prefix ? `${prefix}.${key}` : key;
-      paths.push(path);
-      paths = paths.concat(getAllPaths(obj[key], path));
+      
+      if (obj[key] && typeof obj[key] === 'object') {
+        // For objects or arrays, recurse first
+        const childPaths = getAllPaths(obj[key], path);
+        // Only add child paths if they exist
+        if (childPaths.length > 0) {
+          paths = paths.concat(childPaths);
+        } else {
+          // If no child paths (empty object/array), add this path
+          paths.push(path);
+        }
+      } else {
+        // For primitive values, add the path
+        paths.push(path);
+      }
     }
   }
+  
   return paths;
 }
 
@@ -130,7 +158,7 @@ export function MessageCard({ message, showDiffByDefault = false }: MessageCardP
       animate={{ opacity: 1, y: 0 }}
       layout
       className={cn(
-        "backdrop-blur-xl border rounded-2xl p-4 transition-all duration-300 cursor-pointer group/message",
+        "backdrop-blur-xl border rounded-xl p-3 transition-all duration-300 cursor-pointer group/message",
         themeClasses.cardBg,
         themeClasses.border,
         themeClasses.shadow,
@@ -142,13 +170,13 @@ export function MessageCard({ message, showDiffByDefault = false }: MessageCardP
       {/* Header */}
       <div 
         className={cn(
-          "px-4 py-3 flex flex-col gap-2 cursor-pointer transition-colors",
+          "px-3 py-2 flex flex-col gap-1.5 cursor-pointer transition-colors",
           theme.mode === 'light' ? "hover:bg-slate-200/50" : "hover:bg-slate-800/50"
         )}
         onClick={() => setExpanded(!expanded)}
       >
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3 overflow-hidden">
+          <div className="flex items-center gap-2 overflow-hidden">
             <div className={cn("flex-shrink-0 w-2 h-2 rounded-full shadow-[0_0_8px_rgba(34,211,238,0.8)]", theme.mode === 'light' ? "bg-cyan-600" : "bg-cyan-400")} />
             <span className={cn("font-mono text-sm font-semibold truncate max-w-[200px] sm:max-w-xs md:max-w-md", themeClasses.textPrimary)}>
               {message.topic}
@@ -167,7 +195,7 @@ export function MessageCard({ message, showDiffByDefault = false }: MessageCardP
               {isText && 'TEXT'}
             </span>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <div className={cn("text-xs font-mono truncate max-w-[100px] sm:max-w-[200px]", themeClasses.textSecondary)}>
               {!expanded && (isJson ? '{...}' : message.payload.substring(0, 30) + (message.payload.length > 30 ? '...' : ''))}
             </div>
@@ -177,13 +205,13 @@ export function MessageCard({ message, showDiffByDefault = false }: MessageCardP
           </div>
         </div>
 
-        <div className={cn("flex flex-wrap items-center gap-2 text-[10px] sm:text-xs font-mono", themeClasses.textSecondary)}>
-          <span className={cn("flex items-center gap-1 px-2 py-0.5 rounded-md border", themeClasses.border, theme.mode === 'light' ? "bg-slate-200 text-slate-700" : "bg-slate-900/50 text-slate-300")}>
-            <Activity className="w-3 h-3 text-cyan-500" /> QoS {message.qos}
+        <div className={cn("flex flex-wrap items-center gap-1.5 text-[10px] sm:text-xs font-mono", themeClasses.textSecondary)}>
+          <span className={cn("flex items-center gap-1 px-1.5 py-0.5 rounded text-xs border", themeClasses.border, theme.mode === 'light' ? "bg-slate-200 text-slate-700" : "bg-slate-900/50 text-slate-300")}>
+            <Activity className="w-2.5 h-2.5 text-cyan-500" /> QoS {message.qos}
           </span>
           
-          <div className={cn("flex items-center gap-1 px-2 py-0.5 rounded-md border group/time", themeClasses.border, theme.mode === 'light' ? "bg-slate-200 text-slate-700" : "bg-slate-900/50 text-slate-300")}>
-            <Clock className={cn("w-3 h-3", theme.mode === 'light' ? "text-purple-600" : "text-purple-400")} />
+          <div className={cn("flex items-center gap-1 px-1.5 py-0.5 rounded text-xs border group/time", themeClasses.border, theme.mode === 'light' ? "bg-slate-200 text-slate-700" : "bg-slate-900/50 text-slate-300")}>
+            <Clock className={cn("w-2.5 h-2.5", theme.mode === 'light' ? "text-purple-600" : "text-purple-400")} />
             <span className="font-mono text-xs">{format(message.timestamp, 'HH:mm:ss')}</span>
             <button 
               onClick={(e) => {
@@ -193,11 +221,11 @@ export function MessageCard({ message, showDiffByDefault = false }: MessageCardP
               className={cn("opacity-0 group-hover/time:opacity-100 p-0.5 rounded transition-all", theme.mode === 'light' ? "hover:bg-slate-300 hover:text-cyan-600" : "hover:bg-slate-700 hover:text-cyan-400")}
               title="Copy formatted time"
             >
-              <Copy className="w-3 h-3" />
+              <Copy className="w-2.5 h-2.5" />
             </button>
           </div>
-          <div className={cn("flex items-center gap-1 px-2 py-0.5 rounded-md border group/ts", themeClasses.border, theme.mode === 'light' ? "bg-slate-200 text-slate-700" : "bg-slate-900/50 text-slate-300")}>
-            <Hash className={cn("w-3 h-3", theme.mode === 'light' ? "text-emerald-600" : "text-emerald-400")} />
+          <div className={cn("flex items-center gap-1 px-1.5 py-0.5 rounded text-xs border group/ts", themeClasses.border, theme.mode === 'light' ? "bg-slate-200 text-slate-700" : "bg-slate-900/50 text-slate-300")}>
+            <Hash className={cn("w-2.5 h-2.5", theme.mode === 'light' ? "text-emerald-600" : "text-emerald-400")} />
             <span className="font-mono text-xs">{message.timestamp}</span>
             <button 
               onClick={(e) => {
@@ -207,7 +235,7 @@ export function MessageCard({ message, showDiffByDefault = false }: MessageCardP
               className={cn("opacity-0 group-hover/ts:opacity-100 p-0.5 rounded transition-all", theme.mode === 'light' ? "hover:bg-slate-300 hover:text-cyan-600" : "hover:bg-slate-700 hover:text-cyan-400")}
               title="Copy timestamp"
             >
-              <Copy className="w-3 h-3" />
+              <Copy className="w-2.5 h-2.5" />
             </button>
           </div>
         </div>
@@ -223,13 +251,13 @@ export function MessageCard({ message, showDiffByDefault = false }: MessageCardP
             transition={{ duration: 0.2 }}
             className={cn("border-t", theme.mode === 'light' ? "border-slate-300" : "border-slate-700/50")}
           >
-            <div className={cn("p-4", theme.mode === 'light' ? "bg-slate-100/50" : "bg-slate-900/30")}>
+            <div className={cn("p-3", theme.mode === 'light' ? "bg-slate-100/50" : "bg-slate-900/30")}>
               {/* Toolbar */}
-              <div className="flex flex-wrap items-center gap-2 mb-3">
+              <div className="flex flex-wrap items-center gap-1.5 mb-2">
                 <button
                   onClick={(e) => { e.stopPropagation(); setViewMode('formatted'); }}
                   className={cn(
-                    "px-3 py-1.5 rounded-lg text-xs font-medium transition-all border",
+                    "px-2 py-1 rounded-lg text-xs font-medium transition-all border",
                     viewMode === 'formatted'
                       ? "bg-cyan-500/20 text-cyan-400 border-cyan-500/30"
                       : theme.mode === 'light' ? "bg-slate-200 text-slate-700 border border-slate-300 hover:bg-slate-300" : "bg-slate-800 text-slate-400 border border-slate-700 hover:bg-slate-700"
@@ -240,7 +268,7 @@ export function MessageCard({ message, showDiffByDefault = false }: MessageCardP
                 <button
                   onClick={(e) => { e.stopPropagation(); setViewMode('raw'); }}
                   className={cn(
-                    "px-3 py-1.5 rounded-lg text-xs font-medium transition-all border",
+                    "px-2 py-1 rounded-lg text-xs font-medium transition-all border",
                     viewMode === 'raw'
                       ? "bg-cyan-500/20 text-cyan-400 border-cyan-500/30"
                       : theme.mode === 'light' ? "bg-slate-200 text-slate-700 border border-slate-300 hover:bg-slate-300" : "bg-slate-800 text-slate-400 border border-slate-700 hover:bg-slate-700"
@@ -252,7 +280,7 @@ export function MessageCard({ message, showDiffByDefault = false }: MessageCardP
                   <button
                     onClick={(e) => { e.stopPropagation(); setViewMode('diff'); }}
                     className={cn(
-                      "px-3 py-1.5 rounded-lg text-xs font-medium transition-all border",
+                      "px-2 py-1 rounded-lg text-xs font-medium transition-all border",
                       viewMode === 'diff'
                         ? "bg-cyan-500/20 text-cyan-400 border-cyan-500/30"
                         : theme.mode === 'light' ? "bg-slate-200 text-slate-700 border border-slate-300 hover:bg-slate-300" : "bg-slate-800 text-slate-400 border border-slate-700 hover:bg-slate-700"
@@ -266,7 +294,7 @@ export function MessageCard({ message, showDiffByDefault = false }: MessageCardP
                 <button
                   onClick={(e) => { e.stopPropagation(); setShowFieldPicker(true); }}
                   className={cn(
-                    "px-3 py-1.5 rounded-lg text-xs font-medium transition-all border",
+                    "px-2 py-1 rounded-lg text-xs font-medium transition-all border",
                     showFieldPicker ? "bg-indigo-500/20 text-indigo-300 border border-indigo-500/30" : theme.mode === 'light' ? "bg-slate-200 text-slate-700 border border-slate-300 hover:bg-slate-300" : "bg-slate-800 text-slate-400 border border-slate-700 hover:bg-slate-700"
                   )}
                 >
@@ -276,7 +304,7 @@ export function MessageCard({ message, showDiffByDefault = false }: MessageCardP
                   onClick={(e) => { e.stopPropagation(); setShowSelectedOnly(!showSelectedOnly); }}
                   disabled={selectedFields.length === 0}
                   className={cn(
-                    "px-3 py-1.5 rounded-lg text-xs font-medium transition-all border disabled:opacity-50 disabled:cursor-not-allowed",
+                    "px-2 py-1 rounded-lg text-xs font-medium transition-all border disabled:opacity-50 disabled:cursor-not-allowed",
                     showSelectedOnly ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/30" : theme.mode === 'light' ? "bg-slate-200 text-slate-700 border border-slate-300 hover:bg-slate-300" : "bg-slate-800 text-slate-400 border border-slate-700 hover:bg-slate-700"
                   )}
                 >

@@ -139,7 +139,7 @@ export function BrokerSidebar({
   return (
     <div className={cn(
       "backdrop-blur-xl border rounded-2xl flex flex-col h-full overflow-hidden transition-all duration-300",
-      themeClasses.cardBg,
+      theme.overlay === 'transparent' ? 'bg-transparent' : themeClasses.cardBg,
       themeClasses.border,
       themeClasses.shadow,
       isCollapsed && "opacity-50"
@@ -206,7 +206,11 @@ export function BrokerSidebar({
                   layout
                   className={cn(
                     "group relative p-3 rounded-xl border transition-all overflow-hidden",
-                    isActive
+                    theme.overlay === 'transparent'
+                      ? isActive
+                        ? "bg-cyan-500/10 border-cyan-500/30 shadow-inner shadow-cyan-500/10"
+                        : "bg-transparent border-slate-700/30 hover:bg-slate-800/40 hover:border-slate-600"
+                      : isActive
                       ? "bg-cyan-500/10 border-cyan-500/30 shadow-inner shadow-cyan-500/10"
                       : theme.mode === 'light'
                         ? "bg-white border-slate-300 hover:bg-slate-100 hover:border-slate-400"
@@ -254,9 +258,11 @@ export function BrokerSidebar({
                           }}
                           className={cn(
                             "p-1.5 rounded-md transition-colors",
-                            theme.mode === 'light' 
-                              ? "text-slate-400 hover:text-cyan-600 hover:bg-cyan-500/10" 
-                              : "text-slate-500 hover:text-cyan-400 hover:bg-cyan-500/10"
+                            theme.overlay === 'transparent' && theme.mode === 'light'
+                              ? "text-slate-500 hover:text-cyan-600 hover:bg-cyan-500/10"
+                              : theme.mode === 'light' 
+                                ? "text-slate-400 hover:text-cyan-600 hover:bg-cyan-500/10" 
+                                : "text-slate-500 hover:text-cyan-400 hover:bg-cyan-500/10"
                           )}
                           title="Edit Broker"
                         >
@@ -269,9 +275,11 @@ export function BrokerSidebar({
                           }}
                           className={cn(
                             "p-1.5 rounded-md transition-colors",
-                            theme.mode === 'light' 
-                              ? "text-slate-400 hover:text-rose-600 hover:bg-rose-500/10" 
-                              : "text-slate-500 hover:text-rose-400 hover:bg-rose-500/10"
+                            theme.overlay === 'transparent' && theme.mode === 'light'
+                              ? "text-slate-500 hover:text-rose-600 hover:bg-rose-500/10"
+                              : theme.mode === 'light' 
+                                ? "text-slate-400 hover:text-rose-600 hover:bg-rose-500/10" 
+                                : "text-slate-500 hover:text-rose-400 hover:bg-rose-500/10"
                           )}
                           title="Delete Broker"
                         >
@@ -284,9 +292,11 @@ export function BrokerSidebar({
                     {isActive && errorMsg && (
                       <div className={cn(
                         "flex items-start gap-1.5 p-2 rounded-lg border text-[10px] leading-tight",
-                        theme.mode === 'light' 
-                          ? "bg-rose-50 border-rose-200 text-rose-700" 
-                          : "bg-rose-500/10 border border-rose-500/20 text-rose-400"
+                        theme.overlay === 'transparent'
+                          ? "bg-rose-500/10 border border-rose-500/20 text-rose-400"
+                          : theme.mode === 'light' 
+                            ? "bg-rose-50 border-rose-200 text-rose-700" 
+                            : "bg-rose-500/10 border border-rose-500/20 text-rose-400"
                       )}>
                         <AlertCircle className="w-3 h-3 shrink-0 mt-0.5" />
                         <p className="break-words">{errorMsg}</p>
@@ -295,7 +305,7 @@ export function BrokerSidebar({
 
                     {/* Topics Section - Only for Active Broker */}
                     {isActive && (
-                      <div className={cn("mt-1 pt-3 border-t relative", theme.mode === 'light' ? "border-slate-300" : "border-slate-700/50")}>
+                      <div className={cn("mt-1 pt-3 border-t relative", theme.overlay === 'transparent' ? "border-slate-700/30" : theme.mode === 'light' ? "border-slate-300" : "border-slate-700/50")}>
                         {/* Topic Tags */}
                         <div className="flex flex-wrap gap-1.5 items-center mb-2">
                           {/* Topic Tags */}
@@ -318,9 +328,13 @@ export function BrokerSidebar({
                                     "max-w-[200px] cursor-pointer",
                                     "hover:shadow-md active:scale-95",
                                     isSubscribed
-                                      ? theme.mode === 'light'
-                                        ? "bg-cyan-100 text-cyan-700 border-cyan-300 hover:bg-rose-100 hover:border-rose-300 hover:text-rose-700"
-                                        : "bg-cyan-500/20 text-cyan-400 border-cyan-500/30 hover:bg-rose-500/20 hover:border-rose-500/30 hover:text-rose-400"
+                                      ? theme.overlay === 'transparent'
+                                        ? "bg-cyan-500/20 text-cyan-400 border-cyan-500/30 hover:bg-rose-500/20 hover:border-rose-500/30 hover:text-rose-400"
+                                        : theme.mode === 'light'
+                                          ? "bg-cyan-100 text-cyan-700 border-cyan-300 hover:bg-rose-100 hover:border-rose-300 hover:text-rose-700"
+                                          : "bg-cyan-500/20 text-cyan-400 border-cyan-500/30 hover:bg-rose-500/20 hover:border-rose-500/30 hover:text-rose-400"
+                                      : theme.overlay === 'transparent'
+                                      ? "bg-transparent text-slate-400 border-slate-700/30 hover:bg-cyan-500/20 hover:border-cyan-500/30"
                                       : theme.mode === 'light'
                                       ? "bg-slate-100 text-slate-600 border-slate-300 hover:bg-cyan-100 hover:border-cyan-300"
                                       : "bg-slate-800 text-slate-400 border-slate-700 hover:bg-cyan-500/20 hover:border-cyan-500/30"
@@ -343,9 +357,11 @@ export function BrokerSidebar({
                                     }}
                                     className={cn(
                                       "cursor-pointer opacity-50 hover:opacity-100 transition-opacity p-0.5",
-                                      theme.mode === 'light'
-                                        ? "text-cyan-700 hover:text-rose-700"
-                                        : "text-cyan-400 hover:text-rose-400"
+                                      theme.overlay === 'transparent' && theme.mode === 'light'
+                                        ? "text-cyan-600 hover:text-rose-600"
+                                        : theme.mode === 'light'
+                                          ? "text-cyan-700 hover:text-rose-700"
+                                          : "text-cyan-400 hover:text-rose-400"
                                     )}
                                     title="Delete from favorites"
                                   >
@@ -356,7 +372,7 @@ export function BrokerSidebar({
                             })}
                           </AnimatePresence>
                           {favoriteTopics.length === 0 && (
-                            <div className={cn("text-xs py-2 px-3 rounded-md border border-dashed", themeClasses.textSecondary)}>
+                            <div className={cn("text-xs py-2 px-3 rounded-md border border-dashed", theme.overlay === 'transparent' ? "border-slate-700/30" : themeClasses.textSecondary)}>
                               No favorite topics. Click + to add.
                             </div>
                           )}
@@ -387,9 +403,13 @@ export function BrokerSidebar({
                                     placeholder="Topic..."
                                     className={cn(
                                       "w-48 px-3 py-1.5 rounded-md text-xs font-mono outline-none border transition-all",
-                                      theme.mode === 'light'
-                                        ? "bg-white border-slate-300 text-slate-900 placeholder-slate-400 focus:border-cyan-500"
-                                        : "bg-slate-800 border-slate-600 text-slate-100 placeholder-slate-500 focus:border-cyan-500"
+                                      theme.overlay === 'transparent'
+                                        ? theme.mode === 'light'
+                                          ? "bg-white/50 border-slate-300 text-slate-900 placeholder-slate-400 focus:border-cyan-500"
+                                          : "bg-slate-800/50 border-slate-600 text-slate-100 placeholder-slate-500 focus:border-cyan-500"
+                                        : theme.mode === 'light'
+                                          ? "bg-white border-slate-300 text-slate-900 placeholder-slate-400 focus:border-cyan-500"
+                                          : "bg-slate-800 border-slate-600 text-slate-100 placeholder-slate-500 focus:border-cyan-500"
                                     )}
                                     autoFocus
                                   />
@@ -404,13 +424,21 @@ export function BrokerSidebar({
                               className={cn(
                                 "relative flex items-center justify-center p-2 rounded-md text-xs font-medium transition-all shrink-0",
                                 status !== 'connected'
-                                  ? theme.mode === 'light'
-                                    ? "bg-slate-100 text-slate-400 cursor-not-allowed"
-                                    : "bg-slate-800 text-slate-500 cursor-not-allowed"
+                                  ? theme.overlay === 'transparent'
+                                    ? theme.mode === 'light'
+                                      ? "bg-white/50 text-slate-400 cursor-not-allowed"
+                                      : "bg-slate-800/50 text-slate-500 cursor-not-allowed"
+                                    : theme.mode === 'light'
+                                      ? "bg-slate-100 text-slate-400 cursor-not-allowed"
+                                      : "bg-slate-800 text-slate-500 cursor-not-allowed"
                                   : showInlineInput
                                   ? theme.mode === 'light'
                                     ? "bg-cyan-500 text-white hover:bg-cyan-600 shadow-lg shadow-cyan-500/30"
                                     : "bg-cyan-600 text-white hover:bg-cyan-700"
+                                  : theme.overlay === 'transparent'
+                                  ? theme.mode === 'light'
+                                    ? "bg-white/50 text-cyan-700 hover:bg-slate-200/50"
+                                    : "bg-cyan-500/20 text-cyan-400 hover:bg-cyan-500/30"
                                   : theme.mode === 'light'
                                   ? "bg-cyan-100 text-cyan-700 hover:bg-cyan-200"
                                   : "bg-cyan-500/20 text-cyan-400 hover:bg-cyan-500/30"
@@ -434,13 +462,25 @@ export function BrokerSidebar({
                             className={cn(
                               "relative flex items-center justify-center p-2 rounded-md text-xs font-medium transition-all shrink-0",
                               status === 'connected'
-                                ? theme.mode === 'light'
-                                  ? "bg-rose-100 text-rose-700 hover:bg-rose-200"
-                                  : "bg-rose-500/20 text-rose-400 hover:bg-rose-500/30"
+                                ? theme.overlay === 'transparent'
+                                  ? theme.mode === 'light'
+                                    ? "bg-white/50 text-rose-700 border-slate-300 hover:bg-slate-200/50"
+                                    : "bg-rose-500/20 text-rose-400 hover:bg-rose-500/30"
+                                  : theme.mode === 'light'
+                                    ? "bg-rose-100 text-rose-700 hover:bg-rose-200"
+                                    : "bg-rose-500/20 text-rose-400 hover:bg-rose-500/30"
                                 : status === 'connecting'
+                                ? theme.overlay === 'transparent'
+                                  ? theme.mode === 'light'
+                                    ? "bg-white/50 text-amber-700 border-slate-300 cursor-not-allowed"
+                                    : "bg-amber-500/20 text-amber-400 cursor-wait"
+                                  : theme.mode === 'light'
+                                    ? "bg-amber-100 text-amber-700 cursor-wait hover:bg-amber-200"
+                                    : "bg-amber-500/20 text-amber-400 cursor-wait"
+                                : theme.overlay === 'transparent'
                                 ? theme.mode === 'light'
-                                  ? "bg-amber-100 text-amber-700 cursor-wait hover:bg-amber-200"
-                                  : "bg-amber-500/20 text-amber-400 cursor-wait"
+                                  ? "bg-white/50 text-cyan-700 border-slate-300 hover:bg-slate-200/50"
+                                  : "bg-cyan-500/20 text-cyan-400 hover:bg-cyan-500/30"
                                 : theme.mode === 'light'
                                 ? "bg-cyan-100 text-cyan-700 hover:bg-cyan-200"
                                 : "bg-cyan-500/20 text-cyan-400 hover:bg-cyan-500/30"

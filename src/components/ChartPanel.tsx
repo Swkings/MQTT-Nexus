@@ -60,7 +60,13 @@ export function ChartPanel({ data, path, onClose, compact = false, isPaused = fa
     return data.map(d => ({
       ...d,
       value: isNumeric ? (typeof d.value === 'number' ? d.value : parseFloat(d.value)) : String(d.value)
-    })).filter(d => isNumeric ? !isNaN(d.value) : true);
+    })).filter(d => {
+      // Filter out null, undefined, and NaN values
+      if (d.value === null || d.value === undefined) return false;
+      if (isNumeric && isNaN(d.value)) return false;
+      if (!isNumeric && String(d.value) === 'null') return false;
+      return true;
+    });
   }, [data, isNumeric]);
 
   const categories = useMemo(() => {

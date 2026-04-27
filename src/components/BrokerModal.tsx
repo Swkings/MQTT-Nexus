@@ -190,22 +190,26 @@ export function BrokerModal({
     }
   }, [isOpen, initialData]);
 
-  // 根据协议设置默认 path 和 port
+  // 根据协议设置默认 path 和 port (仅在创建新 broker 时)
   useEffect(() => {
-    if (protocol === 'ws') {
-      setPath('/mqtt');
-      setPort(8083);
-    } else if (protocol === 'wss') {
-      setPath('/mqtt');
-      setPort(8084);
-    } else if (protocol === 'mqtt') {
-      setPath('/');
-      setPort(1883);
-    } else if (protocol === 'mqtts') {
-      setPath('/');
-      setPort(8883);
+    // 只在创建新 broker 时自动设置默认端口和路径
+    // 编辑现有 broker 时，保持用户已设置的值
+    if (!initialData) {
+      if (protocol === 'ws') {
+        setPath('/mqtt');
+        setPort(8083);
+      } else if (protocol === 'wss') {
+        setPath('/mqtt');
+        setPort(8084);
+      } else if (protocol === 'mqtt') {
+        setPath('/');
+        setPort(1883);
+      } else if (protocol === 'mqtts') {
+        setPath('/');
+        setPort(8883);
+      }
     }
-  }, [protocol]);
+  }, [protocol, initialData]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -281,7 +285,12 @@ export function BrokerModal({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm"
+            className={cn(
+              "fixed inset-0 z-50",
+              theme.mode === 'light'
+                ? "bg-slate-950/40 backdrop-blur-sm"
+                : "bg-slate-950/80 backdrop-blur-sm"
+            )}
           />
           <motion.div
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
