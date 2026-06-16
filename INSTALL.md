@@ -48,24 +48,24 @@ git --version
 
 ```bash
 # 从 main 分支安装
-curl -fsSL https://raw.githubusercontent.com/your-org/MQTT-Nexus/main/install-online.sh | bash
+curl -fsSL https://raw.githubusercontent.com/swkings/MQTT-Nexus/main/install-online.sh | bash
 
 # 或使用 wget
-wget -qO- https://raw.githubusercontent.com/your-org/MQTT-Nexus/main/install-online.sh | bash
+wget -qO- https://raw.githubusercontent.com/swkings/MQTT-Nexus/main/install-online.sh | bash
 
 # 从特定分支安装
-curl -fsSL https://raw.githubusercontent.com/your-org/MQTT-Nexus/develop/install-online.sh | bash
+curl -fsSL https://raw.githubusercontent.com/swkings/MQTT-Nexus/develop/install-online.sh | bash
 ```
 
 #### Windows (PowerShell)
 
 ``powershell
 # 从 main 分支安装（PowerShell 5.1+ 或 PowerShell 7+）
-powershell -Command "iwr -UseBasicParsing https://raw.githubusercontent.com/your-org/MQTT-Nexus/main/install-online.ps1 | iex"
+powershell -Command "iwr -UseBasicParsing https://raw.githubusercontent.com/swkings/MQTT-Nexus/main/install-online.ps1 | iex"
 
 # 或下载后手动运行
 # 1. 下载脚本
-iwr -UseBasicParsing https://raw.githubusercontent.com/your-org/MQTT-Nexus/main/install-online.ps1 -OutFile install-online.ps1
+iwr -UseBasicParsing https://raw.githubusercontent.com/swkings/MQTT-Nexus/main/install-online.ps1 -OutFile install-online.ps1
 
 # 2. 运行脚本
 .\install-online.ps1
@@ -88,7 +88,7 @@ iwr -UseBasicParsing https://raw.githubusercontent.com/your-org/MQTT-Nexus/main/
 
 ```bash
 # 1. 克隆仓库
-git clone https://github.com/your-org/MQTT-Nexus.git
+git clone https://github.com/swkings/MQTT-Nexus.git
 cd MQTT-Nexus
 
 # 2. 运行安装脚本
@@ -115,7 +115,7 @@ chmod +x install.sh
 
 ```batch
 REM 1. 克隆仓库
-git clone https://github.com/your-org/MQTT-Nexus.git
+git clone https://github.com/swkings/MQTT-Nexus.git
 cd MQTT-Nexus
 
 REM 2. 运行安装脚本
@@ -155,7 +155,7 @@ install.bat --help
 
 ```bash
 # 使用 Git 克隆
-git clone https://github.com/your-org/MQTT-Nexus.git
+git clone https://github.com/swkings/MQTT-Nexus.git
 cd MQTT-Nexus
 
 # 或者下载 ZIP 文件并解压

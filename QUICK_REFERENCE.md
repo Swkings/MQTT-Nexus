@@ -6,17 +6,17 @@
 
 ```bash
 # Linux/macOS
-curl -fsSL https://raw.githubusercontent.com/your-org/MQTT-Nexus/main/install-online.sh | bash
+curl -fsSL https://raw.githubusercontent.com/swkings/MQTT-Nexus/main/install-online.sh | bash
 
 # Windows (PowerShell)
-powershell -Command "iwr -UseBasicParsing https://raw.githubusercontent.com/your-org/MQTT-Nexus/main/install-online.bat | iex"
+powershell -Command "iwr -UseBasicParsing https://raw.githubusercontent.com/swkings/MQTT-Nexus/main/install-online.bat | iex"
 ```
 
 ###  方式 2：Clone 安装
 
 ```bash
 # 1. 克隆仓库
-git clone https://github.com/your-org/MQTT-Nexus.git
+git clone https://github.com/swkings/MQTT-Nexus.git
 cd MQTT-Nexus
 
 # 2. 一键安装

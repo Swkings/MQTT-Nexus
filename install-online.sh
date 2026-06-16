@@ -48,7 +48,7 @@ step() {
 # -----------------------------------------------------------------------------
 # 配置
 # -----------------------------------------------------------------------------
-REPO_URL="https://github.com/your-org/MQTT-Nexus.git"
+REPO_URL="https://github.com/swkings/MQTT-Nexus.git"
 BRANCH="main"
 INSTALL_DIR="./mqtt-nexus"
 BUILD_ELECTRON=true  # ✅ 默认构建 Electron 桌面应用
@@ -137,10 +137,10 @@ show_usage() {
     echo ""
     echo "Examples:"
     echo "  # Install with Electron desktop app (default)"
-    echo "  curl -fsSL https://raw.githubusercontent.com/your-org/MQTT-Nexus/main/install-online.sh | bash"
+    echo "  curl -fsSL https://raw.githubusercontent.com/swkings/MQTT-Nexus/main/install-online.sh | bash"
     echo ""
     echo "  # Install web version only"
-    echo "  curl -fsSL https://raw.githubusercontent.com/your-org/MQTT-Nexus/main/install-online.sh | bash -s -- --no-electron"
+    echo "  curl -fsSL https://raw.githubusercontent.com/swkings/MQTT-Nexus/main/install-online.sh | bash -s -- --no-electron"
     echo ""
     echo "Requirements:"
     echo "  - Node.js >= 18.x"

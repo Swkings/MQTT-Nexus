@@ -53,20 +53,20 @@ Install directly without cloning the repository:
 **Linux/macOS:**
 ```bash
 # Install from main branch
-curl -fsSL https://raw.githubusercontent.com/your-org/MQTT-Nexus/main/install-online.sh | bash
+curl -fsSL https://raw.githubusercontent.com/swkings/MQTT-Nexus/main/install-online.sh | bash
 
 # Or using wget
-wget -qO- https://raw.githubusercontent.com/your-org/MQTT-Nexus/main/install-online.sh | bash
+wget -qO- https://raw.githubusercontent.com/swkings/MQTT-Nexus/main/install-online.sh | bash
 ```
 
 **Windows (PowerShell):**
 ```
 # Install from main branch (PowerShell 5.1+ or PowerShell 7+)
-powershell -Command "iwr -UseBasicParsing https://raw.githubusercontent.com/your-org/MQTT-Nexus/main/install-online.ps1 | iex"
+powershell -Command "iwr -UseBasicParsing https://raw.githubusercontent.com/swkings/MQTT-Nexus/main/install-online.ps1 | iex"
 
 # Or download and run manually
 # 1. Download the script
-iwr -UseBasicParsing https://raw.githubusercontent.com/your-org/MQTT-Nexus/main/install-online.ps1 -OutFile install-online.ps1
+iwr -UseBasicParsing https://raw.githubusercontent.com/swkings/MQTT-Nexus/main/install-online.ps1 -OutFile install-online.ps1
 
 # 2. Run the script
 .\install-online.ps1
@@ -80,7 +80,7 @@ iwr -UseBasicParsing https://raw.githubusercontent.com/your-org/MQTT-Nexus/main/
 **Linux/macOS:**
 ```bash
 # Clone the repository
-git clone https://github.com/your-org/MQTT-Nexus.git
+git clone https://github.com/swkings/MQTT-Nexus.git
 cd MQTT-Nexus
 
 # Run the installation script

@@ -8,23 +8,23 @@
 
 ```bash
 # 从 main 分支安装（推荐）
-curl -fsSL https://raw.githubusercontent.com/your-org/MQTT-Nexus/main/install-online.sh | bash
+curl -fsSL https://raw.githubusercontent.com/swkings/MQTT-Nexus/main/install-online.sh | bash
 
 # 或使用 wget
-wget -qO- https://raw.githubusercontent.com/your-org/MQTT-Nexus/main/install-online.sh | bash
+wget -qO- https://raw.githubusercontent.com/swkings/MQTT-Nexus/main/install-online.sh | bash
 
 # 从 develop 分支安装（开发版本）
-curl -fsSL https://raw.githubusercontent.com/your-org/MQTT-Nexus/develop/install-online.sh | bash
+curl -fsSL https://raw.githubusercontent.com/swkings/MQTT-Nexus/develop/install-online.sh | bash
 ```
 
 ### Windows (PowerShell)
 
 ```powershell
 # 从 main 分支安装（推荐）
-powershell -Command "iwr -UseBasicParsing https://raw.githubusercontent.com/your-org/MQTT-Nexus/main/install-online.bat | iex"
+powershell -Command "iwr -UseBasicParsing https://raw.githubusercontent.com/swkings/MQTT-Nexus/main/install-online.bat | iex"
 
 # 从 develop 分支安装（开发版本）
-powershell -Command "iwr -UseBasicParsing https://raw.githubusercontent.com/your-org/MQTT-Nexus/develop/install-online.bat | iex"
+powershell -Command "iwr -UseBasicParsing https://raw.githubusercontent.com/swkings/MQTT-Nexus/develop/install-online.bat | iex"
 ```
 
 ---
@@ -132,10 +132,10 @@ Quick Start:
 
 ```bash
 # 安装稳定版本（main 分支）
-curl -fsSL https://raw.githubusercontent.com/your-org/MQTT-Nexus/main/install-online.sh | bash
+curl -fsSL https://raw.githubusercontent.com/swkings/MQTT-Nexus/main/install-online.sh | bash
 
 # 安装开发版本（develop 分支）
-curl -fsSL https://raw.githubusercontent.com/your-org/MQTT-Nexus/develop/install-online.sh | bash
+curl -fsSL https://raw.githubusercontent.com/swkings/MQTT-Nexus/develop/install-online.sh | bash
 
 # 安装特定标签版本
 # 需要先 clone 仓库，然后 checkout 到特定标签
@@ -147,7 +147,7 @@ curl -fsSL https://raw.githubusercontent.com/your-org/MQTT-Nexus/develop/install
 
 ```bash
 # 1. clone 到指定目录
-git clone https://github.com/your-org/MQTT-Nexus.git /path/to/your/dir
+git clone https://github.com/swkings/MQTT-Nexus.git /path/to/your/dir
 
 # 2. 进入目录
 cd /path/to/your/dir
@@ -166,12 +166,12 @@ cd /path/to/your/dir
 
 ```bash
 # 方法 1：添加执行权限
-curl -fsSL https://raw.githubusercontent.com/your-org/MQTT-Nexus/main/install-online.sh -o install-online.sh
+curl -fsSL https://raw.githubusercontent.com/swkings/MQTT-Nexus/main/install-online.sh -o install-online.sh
 chmod +x install-online.sh
 ./install-online.sh
 
 # 方法 2：使用 bash 执行
-bash <(curl -fsSL https://raw.githubusercontent.com/your-org/MQTT-Nexus/main/install-online.sh)
+bash <(curl -fsSL https://raw.githubusercontent.com/swkings/MQTT-Nexus/main/install-online.sh)
 ```
 
 ### Windows PowerShell 执行策略
@@ -183,7 +183,7 @@ bash <(curl -fsSL https://raw.githubusercontent.com/your-org/MQTT-Nexus/main/ins
 Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process
 
 # 然后运行安装命令
-powershell -Command "iwr -UseBasicParsing https://raw.githubusercontent.com/your-org/MQTT-Nexus/main/install-online.bat | iex"
+powershell -Command "iwr -UseBasicParsing https://raw.githubusercontent.com/swkings/MQTT-Nexus/main/install-online.bat | iex"
 ```
 
 ### Node.js 版本过低
@@ -204,7 +204,7 @@ nvm use 18
 ```bash
 # 使用国内镜像
 export GIT_SSL_NO_VERIFY=1
-curl -fsSL https://raw.githubusercontent.com/your-org/MQTT-Nexus/main/install-online.sh | bash
+curl -fsSL https://raw.githubusercontent.com/swkings/MQTT-Nexus/main/install-online.sh | bash
 
 # 或者手动 clone
 git clone https://gitee.com/mirror/MQTT-Nexus.git  # 如果有镜像
@@ -246,7 +246,7 @@ npm config set registry https://registry.npmmirror.com
 # GitHub Actions 示例
 - name: Install MQTT-Nexus
   run: |
-    curl -fsSL https://raw.githubusercontent.com/your-org/MQTT-Nexus/main/install-online.sh | bash
+    curl -fsSL https://raw.githubusercontent.com/swkings/MQTT-Nexus/main/install-online.sh | bash
 ```
 
 ### 批量部署
@@ -254,7 +254,7 @@ npm config set registry https://registry.npmmirror.com
 ```bash
 # 在多台机器上批量安装
 for host in server1 server2 server3; do
-  ssh $host "curl -fsSL https://raw.githubusercontent.com/your-org/MQTT-Nexus/main/install-online.sh | bash"
+  ssh $host "curl -fsSL https://raw.githubusercontent.com/swkings/MQTT-Nexus/main/install-online.sh | bash"
 done
 ```
 

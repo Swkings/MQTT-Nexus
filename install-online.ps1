@@ -4,13 +4,13 @@
 # 描述：通过 PowerShell 直接下载并安装 MQTT-Nexus 应用
 # 支持：Windows (PowerShell 5.1+ / PowerShell 7+)
 # 要求：Node.js >= 18.x, npm >= 9.x, Git
-# 用法：powershell -Command "iwr -UseBasicParsing https://raw.githubusercontent.com/your-org/MQTT-Nexus/main/install-online.ps1 | iex"
+# 用法：powershell -Command "iwr -UseBasicParsing https://raw.githubusercontent.com/swkings/MQTT-Nexus/main/install-online.ps1 | iex"
 # =============================================================================
 
 # -----------------------------------------------------------------------------
 # 配置
 # -----------------------------------------------------------------------------
-$RepoUrl = "https://github.com/your-org/MQTT-Nexus.git"
+$RepoUrl = "https://github.com/swkings/MQTT-Nexus.git"
 $Branch = "main"
 $InstallDir = ".\mqtt-nexus"
 $BuildElectron = $true  # ✅ 默认构建 Electron 桌面应用
