@@ -90,6 +90,104 @@ build_electron() {
 }
 
 # -----------------------------------------------------------------------------
+# 安装 Electron 应用到系统
+# -----------------------------------------------------------------------------
+run_privileged() {
+    if [ "$(id -u)" -eq 0 ]; then
+        "$@"
+    elif command -v sudo >/dev/null 2>&1; then
+        sudo "$@"
+    else
+        warning "This install step requires root privileges. Re-run with sudo or install the package manually."
+        return 1
+    fi
+}
+
+install_electron_package() {
+    if [ "$BUILD_ELECTRON" != true ]; then
+        return 0
+    fi
+
+    step "Installing Electron desktop application..."
+
+    if [ "$OS" = "linux" ]; then
+        local deb_pkg rpm_pkg
+        deb_pkg=$(ls -t "$INSTALL_DIR"/release/*.deb 2>/dev/null | head -n 1 || true)
+        rpm_pkg=$(ls -t "$INSTALL_DIR"/release/*.rpm 2>/dev/null | head -n 1 || true)
+
+        if [ -n "$deb_pkg" ]; then
+            info "Installing Debian package: $deb_pkg"
+            if command -v apt >/dev/null 2>&1; then
+                run_privileged apt install -y "./$deb_pkg"
+            elif command -v apt-get >/dev/null 2>&1; then
+                run_privileged dpkg -i "$deb_pkg" || run_privileged apt-get install -f -y
+            elif command -v dpkg >/dev/null 2>&1; then
+                run_privileged dpkg -i "$deb_pkg"
+            else
+                warning "No supported Debian package installer found. Install manually: sudo dpkg -i $deb_pkg"
+                return 0
+            fi
+            success "Desktop application installed successfully!"
+            return 0
+        fi
+
+        if [ -n "$rpm_pkg" ]; then
+            info "Installing RPM package: $rpm_pkg"
+            if command -v dnf >/dev/null 2>&1; then
+                run_privileged dnf install -y "$rpm_pkg"
+            elif command -v yum >/dev/null 2>&1; then
+                run_privileged yum install -y "$rpm_pkg"
+            elif command -v rpm >/dev/null 2>&1; then
+                run_privileged rpm -Uvh "$rpm_pkg"
+            else
+                warning "No supported RPM package installer found. Install manually: sudo rpm -Uvh $rpm_pkg"
+                return 0
+            fi
+            success "Desktop application installed successfully!"
+            return 0
+        fi
+
+        warning "No .deb or .rpm package found in $INSTALL_DIR/release/."
+    elif [ "$OS" = "macos" ]; then
+        local dmg_pkg mount_point app_path
+        dmg_pkg=$(ls -t "$INSTALL_DIR"/release/*.dmg 2>/dev/null | head -n 1 || true)
+        if [ -z "$dmg_pkg" ]; then
+            warning "No .dmg package found in $INSTALL_DIR/release/."
+            return 0
+        fi
+
+        info "Mounting DMG package: $dmg_pkg"
+        mount_point=$(hdiutil attach "$dmg_pkg" -nobrowse | awk '/\/Volumes\// {print substr($0, index($0, "/Volumes/")); exit}')
+        if [ -z "$mount_point" ]; then
+            warning "Failed to mount DMG. Install manually: open $dmg_pkg"
+            return 0
+        fi
+
+        app_path=$(find "$mount_point" -maxdepth 1 -name "*.app" -print -quit)
+        if [ -n "$app_path" ]; then
+            info "Copying $(basename "$app_path") to /Applications..."
+            run_privileged cp -R "$app_path" /Applications/
+            success "Desktop application installed successfully!"
+        else
+            warning "No .app found in mounted DMG. Install manually: open $dmg_pkg"
+        fi
+        hdiutil detach "$mount_point" -quiet || true
+    elif [ "$OS" = "windows" ]; then
+        local exe_pkg
+        exe_pkg=$(ls -t "$INSTALL_DIR"/release/*Setup*.exe "$INSTALL_DIR"/release/*.exe 2>/dev/null | head -n 1 || true)
+        if [ -n "$exe_pkg" ]; then
+            info "Starting Windows installer: $exe_pkg"
+            "$exe_pkg"
+            success "Desktop installer completed."
+        else
+            warning "No Windows installer found in $INSTALL_DIR/release/."
+        fi
+    else
+        warning "Automatic system install is not supported for OS: $OS"
+    fi
+}
+
+# -----------------------------------------------------------------------------
 # 显示完成信息
 # -----------------------------------------------------------------------------
 show_completion() {
@@ -100,7 +198,7 @@ show_completion() {
     info "Application installed in: $(pwd)/$INSTALL_DIR"
     
     if [ "$BUILD_ELECTRON" = true ]; then
-        info "Desktop application built successfully!"
+        info "Desktop application built and installed successfully!"
         info "Installers are available in: $INSTALL_DIR/release/"
         echo -e "\n${CYAN}Quick Start:${NC}"
         echo -e "  cd $INSTALL_DIR"
@@ -346,6 +444,7 @@ main() {
     # 构建 Electron 应用
     if [ "$BUILD_ELECTRON" = true ]; then
         build_electron
+        install_electron_package
     fi
     
     # 显示完成信息

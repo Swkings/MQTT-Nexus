@@ -50,6 +50,44 @@ function Build-Electron {
 }
 
 # -----------------------------------------------------------------------------
+# 安装 Electron 应用到系统
+# -----------------------------------------------------------------------------
+function Install-ElectronPackage {
+    if (-not $BuildElectron) {
+        return
+    }
+
+    Write-Step "Installing Electron desktop application..."
+
+    $releaseDir = Join-Path $InstallDir "release"
+    $installer = Get-ChildItem -Path $releaseDir -Filter "*Setup*.exe" -File -ErrorAction SilentlyContinue |
+        Sort-Object LastWriteTime -Descending |
+        Select-Object -First 1
+
+    if (-not $installer) {
+        $installer = Get-ChildItem -Path $releaseDir -Filter "*.exe" -File -ErrorAction SilentlyContinue |
+            Sort-Object LastWriteTime -Descending |
+            Select-Object -First 1
+    }
+
+    if ($installer) {
+        Write-Info "Starting Windows installer: $($installer.FullName)"
+        try {
+            $process = Start-Process -FilePath $installer.FullName -ArgumentList "/S" -Wait -PassThru
+            if ($process.ExitCode -eq 0) {
+                Write-Success "Desktop application installed successfully!"
+            } else {
+                Write-Warning "Silent install exited with code $($process.ExitCode). Run manually: $($installer.FullName)"
+            }
+        } catch {
+            Write-Warning "Failed to start installer. Run manually: $($installer.FullName)"
+        }
+    } else {
+        Write-Warning "No Windows installer found in $releaseDir"
+    }
+}
+
+# -----------------------------------------------------------------------------
 # 颜色输出函数
 # -----------------------------------------------------------------------------
 function Write-Info {
@@ -227,6 +265,7 @@ Set-Location ..
 # -----------------------------------------------------------------------------
 if ($BuildElectron) {
     Build-Electron
+    Install-ElectronPackage
 }
 
 # -----------------------------------------------------------------------------
@@ -241,7 +280,7 @@ Write-Host ""
 Write-Info "Application installed in: $(Get-Location)\$InstallDir"
 
 if ($BuildElectron) {
-    Write-Info "Desktop application built successfully!"
+    Write-Info "Desktop application built and installed successfully!"
     Write-Info "Installers are available in: $InstallDir\release\"
     Write-Host ""
     Write-Host "Quick Start:" -ForegroundColor Cyan

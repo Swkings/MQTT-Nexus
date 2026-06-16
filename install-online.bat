@@ -26,6 +26,7 @@ REM ----------------------------------------------------------------------------
 set "REPO_URL=https://github.com/swkings/MQTT-Nexus.git"
 set "BRANCH=main"
 set "INSTALL_DIR=mqtt-nexus"
+set "BUILD_ELECTRON=true"
 
 REM -----------------------------------------------------------------------------
 REM 输出函数
@@ -185,6 +186,60 @@ cd ..
 goto :eof
 
 REM -----------------------------------------------------------------------------
+REM 构建 Electron 应用
+REM -----------------------------------------------------------------------------
+:build_electron
+call :step "Building Electron desktop application..."
+
+cd %INSTALL_DIR%
+
+call :info "Compiling Electron TypeScript..."
+call npx tsc -p electron/tsconfig.json
+if %errorlevel% neq 0 (
+    call :error "Failed to compile Electron"
+    exit /b 1
+)
+
+call :info "Building Electron package for Windows..."
+call npm run electron:build:win
+if %errorlevel% neq 0 (
+    call :error "Failed to build Electron package"
+    exit /b 1
+)
+
+cd ..
+call :success "Electron application built successfully!"
+call :info "Installer location: %INSTALL_DIR%\release\"
+goto :eof
+
+REM -----------------------------------------------------------------------------
+REM 安装 Electron 应用到系统
+REM -----------------------------------------------------------------------------
+:install_electron_package
+if not "%BUILD_ELECTRON%"=="true" goto :eof
+
+call :step "Installing Electron desktop application..."
+
+set "INSTALLER="
+for /f "delims=" %%f in ('dir /b /a-d /o-d "%INSTALL_DIR%\release\*Setup*.exe" 2^>nul') do if not defined INSTALLER set "INSTALLER=%INSTALL_DIR%\release\%%f"
+if not defined INSTALLER (
+    for /f "delims=" %%f in ('dir /b /a-d /o-d "%INSTALL_DIR%\release\*.exe" 2^>nul') do if not defined INSTALLER set "INSTALLER=%INSTALL_DIR%\release\%%f"
+)
+
+if defined INSTALLER (
+    call :info "Starting Windows installer: !INSTALLER!"
+    start /wait "" "!INSTALLER!" /S
+    if !errorlevel! neq 0 (
+        call :warning "Silent install failed or was cancelled. Run manually: !INSTALLER!"
+    ) else (
+        call :success "Desktop application installed successfully!"
+    )
+) else (
+    call :warning "No Windows installer found in %INSTALL_DIR%\release\."
+)
+goto :eof
+
+REM -----------------------------------------------------------------------------
 REM 显示完成信息
 REM -----------------------------------------------------------------------------
 :show_completion
@@ -195,7 +250,12 @@ echo %GREEN%!%NC% ╚═══════════════════�
 echo.
 
 call :info "Application installed in: %CD%\%INSTALL_DIR%"
-call :info "Web application built successfully!"
+if "%BUILD_ELECTRON%"=="true" (
+    call :info "Desktop application built and installed successfully!"
+    call :info "Installers are available in: %INSTALL_DIR%\release\"
+) else (
+    call :info "Web application built successfully!"
+)
 
 echo.
 echo %CYAN%!%NC% Quick Start:
@@ -223,6 +283,7 @@ echo.
 echo Usage: powershell -Command "iwr -UseBasicParsing ^<script-url^> ^| iex"
 echo.
 echo Options:
+echo   --no-electron   Skip Electron desktop application build and system install
 echo   --help          Show this help message
 echo.
 echo Examples:
@@ -256,11 +317,14 @@ echo %CYAN%!%NC% ╚════════════════════
 echo.
 
 REM 解析参数
-if "%~1"=="--help" call :show_usage & exit /b 0
-if "%~1"=="-h" call :show_usage & exit /b 0
-if not "%~1"=="" (
-    call :error "Unknown option: %~1. Use --help for usage information."
-)
+:parse_args
+if "%~1"=="" goto :main
+if /i "%~1"=="--no-electron" set "BUILD_ELECTRON=false" & shift & goto :parse_args
+if /i "%~1"=="--help" call :show_usage & exit /b 0
+if /i "%~1"=="-h" call :show_usage & exit /b 0
+call :error "Unknown option: %~1. Use --help for usage information."
+
+:main
 
 REM 检查系统要求
 call :check_requirements
@@ -276,6 +340,12 @@ call :setup_environment
 
 REM 构建应用
 call :build_app
+
+REM 构建并安装 Electron（默认执行）
+if "%BUILD_ELECTRON%"=="true" (
+    call :build_electron
+    call :install_electron_package
+)
 
 REM 显示完成信息
 call :show_completion

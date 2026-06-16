@@ -154,6 +154,33 @@ call :info "Installer location: .\release\"
 goto :eof
 
 REM -----------------------------------------------------------------------------
+REM 安装 Electron 应用到系统
+REM -----------------------------------------------------------------------------
+:install_electron_package
+if not "%BUILD_ELECTRON%"=="true" goto :eof
+
+call :step "Installing Electron desktop application..."
+
+set "INSTALLER="
+for /f "delims=" %%f in ('dir /b /a-d /o-d "release\*Setup*.exe" 2^>nul') do if not defined INSTALLER set "INSTALLER=release\%%f"
+if not defined INSTALLER (
+    for /f "delims=" %%f in ('dir /b /a-d /o-d "release\*.exe" 2^>nul') do if not defined INSTALLER set "INSTALLER=release\%%f"
+)
+
+if defined INSTALLER (
+    call :info "Starting Windows installer: !INSTALLER!"
+    start /wait "" "!INSTALLER!" /S
+    if !errorlevel! neq 0 (
+        call :warning "Silent install failed or was cancelled. Run manually: !INSTALLER!"
+    ) else (
+        call :success "Desktop application installed successfully!"
+    )
+) else (
+    call :warning "No Windows installer found in .\release\."
+)
+goto :eof
+
+REM -----------------------------------------------------------------------------
 REM 显示完成信息
 REM -----------------------------------------------------------------------------
 :show_completion
@@ -164,7 +191,7 @@ echo %GREEN%!%NC% ╚═══════════════════�
 echo.
 
 if "%BUILD_ELECTRON%"=="true" (
-    call :info "Desktop application built successfully!"
+    call :info "Desktop application built and installed successfully!"
     call :info "Installers are available in: .\release\"
     echo.
     echo %CYAN%!%NC% Quick Start:
@@ -228,13 +255,14 @@ echo %CYAN%!%NC% ╚════════════════════
 echo.
 
 REM 解析参数
-set SKIP_BUILD=false
-set BUILD_ELECTRON=true  REM ✅ 默认构建 Electron 桌面应用
+set "SKIP_BUILD=false"
+REM 默认构建 Electron 桌面应用
+set "BUILD_ELECTRON=true"
 
 :parse_args
 if "%~1"=="" goto :main
-if /i "%~1"=="--skip-build" set SKIP_BUILD=true & shift & goto :parse_args
-if /i "%~1"=="--no-electron" set BUILD_ELECTRON=false & shift & goto :parse_args
+if /i "%~1"=="--skip-build" set "SKIP_BUILD=true" & shift & goto :parse_args
+if /i "%~1"=="--no-electron" set "BUILD_ELECTRON=false" & shift & goto :parse_args
 if /i "%~1"=="--help" call :show_usage & exit /b 0
 call :error "Unknown option: %~1. Use --help for usage information."
 
@@ -255,6 +283,7 @@ if "%SKIP_BUILD%"=="false" (
     REM 构建 Electron（默认执行）
     if "%BUILD_ELECTRON%"=="true" (
         call :build_electron
+        call :install_electron_package
     )
 ) else (
     call :warning "Skipping build step as requested"
