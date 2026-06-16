@@ -139,6 +139,18 @@ export default function App() {
   });
 
   useEffect(() => {
+    localStorage.setItem('mqtt_brokers', JSON.stringify(brokers));
+  }, [brokers]);
+
+  useEffect(() => {
+    localStorage.setItem('mqtt_saved_hosts', JSON.stringify(savedHosts));
+  }, [savedHosts]);
+
+  useEffect(() => {
+    localStorage.setItem('mqtt_saved_credentials', JSON.stringify(savedCredentials));
+  }, [savedCredentials]);
+
+  useEffect(() => {
     localStorage.setItem('mqtt_favorite_topics', JSON.stringify(favoriteTopics));
   }, [favoriteTopics]);
 
@@ -205,7 +217,7 @@ export default function App() {
   const handleSaveBroker = (brokerData: BrokerConfig | Omit<BrokerConfig, 'id'>) => {
     if ('id' in brokerData && brokerData.id) {
       // Edit existing
-      setBrokers(prev => prev.map(b => b.id === brokerData.id ? brokerData as BrokerConfig : b));
+      setBrokers(prev => prev.map(b => b.id === brokerData.id ? { ...b, ...brokerData } as BrokerConfig : b));
       // If editing the active broker, reconnect
       if (activeBrokerId === brokerData.id) {
         disconnect();

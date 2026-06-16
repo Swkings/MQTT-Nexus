@@ -393,8 +393,12 @@ export function BrokerModal({
                     {/* Library Dropdown */}
                     {showHostLib && (
                       <div 
-                        className="absolute z-[9999] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg shadow-xl max-h-60 overflow-auto" 
-                        style={{ top: '100%', left: 0, right: 0, marginTop: '4px' }}
+                        className={cn(
+                          "absolute left-0 right-0 top-full mt-1 z-[9999] max-h-56 overflow-auto rounded-lg border shadow-2xl",
+                          theme.mode === 'light'
+                            ? "bg-white border-slate-200 text-slate-800 shadow-slate-900/10"
+                            : "bg-slate-900 border-slate-700 text-slate-200 shadow-black/40"
+                        )}
                         onMouseEnter={handleHostLibMouseEnter}
                         onMouseLeave={handleHostLibMouseLeave}
                       >
@@ -423,9 +427,9 @@ export function BrokerModal({
                                     }
                                   }}
                                 >
-                                  <div className="flex items-center justify-between">
-                                    <span className={cn("font-medium truncate", theme.mode === 'light' ? "text-slate-700" : "text-slate-300")}>{item.alias || item.host}</span>
-                                    <span className={cn("text-xs ml-2 flex-shrink-0", theme.mode === 'light' ? "text-slate-500" : "text-slate-400")}>{item.host}</span>
+                                  <div className="flex min-w-0 items-center gap-2">
+                                    <span className={cn("min-w-0 flex-1 truncate font-medium", theme.mode === 'light' ? "text-slate-700" : "text-slate-300")}>{item.alias || item.host}</span>
+                                    <span className={cn("max-w-28 flex-shrink-0 truncate text-right text-xs", theme.mode === 'light' ? "text-slate-500" : "text-slate-400")}>{item.host}</span>
                                   </div>
                                 </div>
                                 <button
@@ -462,7 +466,7 @@ export function BrokerModal({
                                 }
                               }}
                               className={cn(
-                                "flex-1 px-2 py-1.5 border rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 transition-colors",
+                                "min-w-0 flex-1 px-2 py-1.5 border rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 transition-colors",
                                 theme.mode === 'light' ? "bg-white text-slate-800 placeholder-slate-500 border-slate-300" : "bg-slate-900 text-slate-300 placeholder-slate-500 border-slate-700"
                               )}
                               placeholder="Alias (e.g., Production Broker)"
