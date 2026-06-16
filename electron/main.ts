@@ -4,6 +4,11 @@ import { fileURLToPath } from 'url';
 import mqtt, { MqttClient, IClientOptions } from 'mqtt';
 import fs from 'fs';
 
+if (process.platform === 'linux') {
+  app.commandLine.appendSwitch('no-sandbox');
+  app.commandLine.appendSwitch('disable-gpu-sandbox');
+}
+
 // ES 模块中需要手动获取 __dirname
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

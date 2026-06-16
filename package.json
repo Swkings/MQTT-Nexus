@@ -1,7 +1,7 @@
 {
   "name": "mqtt-nexus",
   "private": true,
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "MQTT Nexus - AI-Powered MQTT Desktop Client",
   "author": {
     "name": "MQTT Nexus Team",
