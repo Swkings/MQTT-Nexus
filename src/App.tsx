@@ -3,13 +3,13 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useMqtt } from './hooks/useMqtt';
 import { BrokerSidebar } from './components/BrokerSidebar';
 import { BrokerModal } from './components/BrokerModal';
 import { TopicTree } from './components/TopicTree';
 import { TopicView } from './components/TopicView';
-import { Activity, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Folder, FolderOpen, Sun, Moon, Palette, Layers } from 'lucide-react';
+import { PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen } from 'lucide-react';
 import { BrokerConfig, SavedHost, SavedCredential } from './types';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from './lib/utils';
@@ -20,22 +20,6 @@ import { MQTTClientPrefix } from './etc/config';
 export default function App() {
   // Theme states - 移到最前面
   const [theme, setTheme] = useState<ThemeConfig>(() => loadTheme());
-  const [showThemeMenu, setShowThemeMenu] = useState(false);
-  const themeMenuRef = useRef<HTMLDivElement>(null);
-
-  // Close theme menu when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (themeMenuRef.current && !themeMenuRef.current.contains(e.target as Node)) {
-        setShowThemeMenu(false);
-      }
-    };
-
-    if (showThemeMenu) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
-    }
-  }, [showThemeMenu]);
 
   useEffect(() => {
     saveTheme(theme);
@@ -45,17 +29,6 @@ export default function App() {
     getThemeClasses(theme.mode, theme.overlay), 
     [theme]
   );
-
-  const handleThemeChange = (mode: 'dark' | 'light') => {
-    setTheme(prev => ({ ...prev, mode }));
-  };
-
-  const handleOverlayToggle = () => {
-    setTheme(prev => ({ 
-      ...prev, 
-      overlay: prev.overlay === 'opaque' ? 'transparent' : 'opaque' 
-    }));
-  };
 
   const {
     status,
@@ -291,6 +264,13 @@ export default function App() {
     setIsAddModalOpen(true);
   };
 
+  const handleThemeToggle = () => {
+    setTheme(prev => ({
+      ...prev,
+      mode: prev.mode === 'dark' ? 'light' : 'dark'
+    }));
+  };
+
   return (
     <ThemeProvider theme={theme} setTheme={setTheme}>
       <div className={cn(
@@ -307,260 +287,116 @@ export default function App() {
         )}>
           <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-cyan-500/10 blur-[120px]" />
           <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-purple-500/10 blur-[120px]" />
-      </div>
+        </div>
 
-      <div className={cn(
-        "relative z-10 flex flex-col h-screen overflow-hidden"
-      )}>
-        {/* Header */}
-        <header className="flex-shrink-0 flex items-center justify-between mb-6 lg:mb-8">
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-3">
-              <div className={cn(
-                "relative flex items-center justify-center w-10 h-10 rounded-xl shadow-2xl transition-all duration-300",
-                themeClasses.logoGradient,
-                theme.overlay === 'transparent' 
-                  ? 'backdrop-blur-xl shadow-black/30' 
-                  : theme.mode === 'light'
-                    ? 'shadow-cyan-500/30'
-                    : 'shadow-black/50'
-              )}>
-                <Activity 
-                  className={cn(
-                    "w-6 h-6",
-                    theme.overlay === 'transparent' && theme.mode === 'light' 
-                      ? "text-cyan-700 drop-shadow-[0_2px_3px_rgba(0,0,0,0.5)]" 
-                      : theme.mode === 'light'
-                        ? "text-cyan-900 drop-shadow-[0_2px_3px_rgba(0,0,0,0.3)]"
-                        : "text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]"
-                  )} 
-                />
-              </div>
-              <div>
-                <h1 className={cn("text-2xl font-bold tracking-tight", themeClasses.textPrimary, themeClasses.textShadow)}>MQTT Nexus</h1>
-                <p className={cn("text-xs font-mono tracking-wider uppercase", themeClasses.textSecondary, themeClasses.textShadow)}>Real-time Telemetry</p>
-              </div>
-            </div>
-          </div>
+        <div className={cn(
+          "relative z-10 flex flex-col h-screen overflow-hidden"
+        )}>
+          <button
+            onClick={() => setIsLeftSidebarOpen(!isLeftSidebarOpen)}
+            className={cn(
+              "fixed left-0 top-1/2 -translate-y-1/2 z-50",
+              "p-2 rounded-r-xl rounded-l-none",
+              theme.mode === 'light' ? "bg-slate-100 border-slate-300 text-slate-500 hover:text-cyan-600 hover:bg-slate-200" : "bg-slate-800/80 border border-l-0 border-slate-700/50 text-slate-400 hover:text-cyan-400 hover:bg-slate-700/80",
+              "transition-all duration-200 shadow-lg",
+              isLeftSidebarOpen ? "opacity-0 hover:opacity-100" : "opacity-100"
+            )}
+            title={isLeftSidebarOpen ? "Collapse Brokers" : "Expand Brokers"}
+          >
+            {isLeftSidebarOpen ? <PanelLeftClose className="w-5 h-5" /> : <PanelLeftOpen className="w-5 h-5" />}
+          </button>
 
-          <div className="flex items-center gap-4">
-            {/* Theme Toggle Button */}
-            <div className="relative" ref={themeMenuRef}>
-              <button
-                onClick={() => setShowThemeMenu(!showThemeMenu)}
-                className={cn(
-                  "p-2 rounded-xl border transition-colors flex items-center gap-2",
-                  themeClasses.cardBg,
-                  themeClasses.border,
-                  themeClasses.text,
-                  theme.mode === 'light' ? "hover:bg-slate-200" : "hover:bg-slate-700/50"
-                )}
-                title="Theme Settings"
-              >
-                <Palette className="w-5 h-5" />
-                <span className="text-xs font-medium hidden sm:inline">
-                  Theme
-                </span>
-              </button>
+          {/* Topic Tree Collapse Button - 悬浮显示在左侧，Brokers 按钮下方 */}
+          <button
+            onClick={() => setIsTopicTreeOpen(!isTopicTreeOpen)}
+            className={cn(
+              "fixed left-0 top-[calc(50%+60px)] -translate-y-1/2 z-50",
+              "p-2 rounded-r-xl rounded-l-none",
+              theme.mode === 'light' ? "bg-slate-100 border-slate-300 text-slate-500 hover:text-purple-600 hover:bg-slate-200" : "bg-slate-800/80 border border-l-0 border-slate-700/50 text-slate-400 hover:text-purple-400 hover:bg-slate-700/80",
+              "transition-all duration-200 shadow-lg",
+              isTopicTreeOpen ? "opacity-0 hover:opacity-100" : "opacity-100"
+            )}
+            title={isTopicTreeOpen ? "Collapse Topic Tree" : "Expand Topic Tree"}
+          >
+            {isTopicTreeOpen ? <PanelRightClose className="w-5 h-5" /> : <PanelRightOpen className="w-5 h-5" />}
+          </button>
 
-              {/* Theme Menu */}
-              <AnimatePresence>
-                {showThemeMenu && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -10, scale: 0.95 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: -10, scale: 0.95 }}
-                    className={cn(
-                      "absolute right-0 mt-2 w-64 rounded-xl border shadow-lg overflow-hidden z-50",
-                      themeClasses.cardBg,
-                      themeClasses.border,
-                      themeClasses.backdropBlur
-                    )}
-                  >
-                    {/* Theme Mode */}
-                    <div className={cn("p-3 border-b", themeClasses.border)}>
-                      <h4 className={cn("text-sm font-medium mb-2", themeClasses.textPrimary, themeClasses.textShadow)}>Theme Mode</h4>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => handleThemeChange('dark')}
-                          className={cn(
-                            "flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg border transition-colors",
-                            theme.mode === 'dark'
-                              ? "bg-cyan-500/20 border-cyan-500/50 text-cyan-400"
-                              : cn(themeClasses.cardBg, themeClasses.border, themeClasses.text, themeClasses.textShadow, "hover:bg-slate-700/50")
-                          )}
-                        >
-                          <Moon className="w-4 h-4" />
-                          <span className="text-xs font-medium">Dark</span>
-                        </button>
-                        <button
-                          onClick={() => handleThemeChange('light')}
-                          className={cn(
-                            "flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg border transition-colors",
-                            theme.mode === 'light'
-                              ? "bg-cyan-500/20 border-cyan-500/50 text-cyan-400"
-                              : cn(themeClasses.cardBg, themeClasses.border, themeClasses.text, themeClasses.textShadow, "hover:bg-slate-700/50")
-                          )}
-                        >
-                          <Sun className="w-4 h-4" />
-                          <span className="text-xs font-medium">Light</span>
-                        </button>
-                      </div>
+          {/* Main Layout */}
+          <main className="flex-1 flex flex-col lg:flex-row min-h-0 overflow-hidden">
+            
+            {/* Left Sidebar: Connection & Subs */}
+            <AnimatePresence initial={false}>
+              {isLeftSidebarOpen && (
+                <motion.div
+                  initial={{ width: 0, opacity: 0, marginRight: 0 }}
+                  animate={{ width: 320, opacity: 1, marginRight: 8 }}
+                  exit={{ width: 0, opacity: 0, marginRight: 0 }}
+                  transition={{ duration: 0.2, ease: "easeInOut" }}
+                  className="shrink-0 h-full overflow-hidden flex flex-col gap-4"
+                >
+                  <div className="w-[320px] h-full flex flex-col gap-4 overflow-y-auto custom-scrollbar pb-2">
+                    <div className="flex-1 min-h-[400px]">
+                      <BrokerSidebar
+                        brokers={brokers}
+                        activeBrokerId={activeBrokerId}
+                        status={status}
+                        errorMsg={errorMsg}
+                        subscriptions={subscriptions}
+                        onSelect={handleSelectBroker}
+                        onAdd={openAddModal}
+                        onEdit={openEditModal}
+                        onDelete={handleDeleteBroker}
+                        onSubscribe={handleSubscribe}
+                        onUnsubscribe={handleUnsubscribe}
+                        favoriteTopics={favoriteTopics}
+                        setFavoriteTopics={setFavoriteTopics}
+                        isCollapsed={!isLeftSidebarOpen}
+                        onToggleCollapse={() => setIsLeftSidebarOpen(!isLeftSidebarOpen)}
+                        onToggleTheme={handleThemeToggle}
+                        themeMode={theme.mode}
+                      />
                     </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
-                    {/* Overlay Toggle */}
-                    <div className="p-3">
-                      <h4 className={cn("text-sm font-medium mb-2", themeClasses.textPrimary, themeClasses.textShadow)}>Overlay</h4>
-                      <button
-                        onClick={handleOverlayToggle}
-                        className={cn(
-                          "w-full flex items-center justify-between px-3 py-2 rounded-lg border transition-colors",
-                          theme.overlay === 'transparent'
-                            ? "bg-purple-500/20 border-purple-500/50 text-purple-400"
-                            : cn(themeClasses.cardBg, themeClasses.border, themeClasses.text, themeClasses.textShadow, "hover:bg-slate-700/50")
-                        )}
-                      >
-                        <div className="flex items-center gap-2">
-                          <Layers className="w-4 h-4" />
-                          <span className={cn("text-xs font-medium", themeClasses.textShadow)}>Transparent Background</span>
-                        </div>
-                        <div className={cn(
-                          "w-8 h-5 rounded-full relative transition-colors",
-                          theme.overlay === 'transparent' ? "bg-purple-500" : "bg-slate-600"
-                        )}>
-                          <div className={cn(
-                            "absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform",
-                            theme.overlay === 'transparent' ? "left-3.5" : "left-0.5"
-                          )} />
-                        </div>
-                      </button>
-                    </div>
-
-                    {/* Close button */}
-                    <div className="p-2 border-t border-slate-700/50">
-                      <button
-                        onClick={() => setShowThemeMenu(false)}
-                        className={cn(
-                          "w-full px-3 py-1.5 rounded-lg text-xs font-medium transition-colors",
-                          themeClasses.textSecondary,
-                          themeClasses.textShadow,
-                          "hover:bg-slate-700/50 hover:text-slate-300"
-                        )}
-                      >
-                        Close
-                      </button>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          </div>
-        </header>
-
-        {/* Brokers Collapse Button - 悬浮显示在左侧 */}
-        <button
-          onClick={() => setIsLeftSidebarOpen(!isLeftSidebarOpen)}
-          className={cn(
-            "fixed left-0 top-1/2 -translate-y-1/2 z-50",
-            "p-2 rounded-r-xl rounded-l-none",
-            theme.mode === 'light' ? "bg-slate-100 border-slate-300 text-slate-500 hover:text-cyan-600 hover:bg-slate-200" : "bg-slate-800/80 border border-l-0 border-slate-700/50 text-slate-400 hover:text-cyan-400 hover:bg-slate-700/80",
-            "transition-all duration-200 shadow-lg",
-            isLeftSidebarOpen ? "opacity-0 hover:opacity-100" : "opacity-100"
-          )}
-          title={isLeftSidebarOpen ? "Collapse Brokers" : "Expand Brokers"}
-        >
-          {isLeftSidebarOpen ? <PanelLeftClose className="w-5 h-5" /> : <PanelLeftOpen className="w-5 h-5" />}
-        </button>
-
-        {/* Topic Tree Collapse Button - 悬浮显示在左侧，Brokers 按钮下方 */}
-        <button
-          onClick={() => setIsTopicTreeOpen(!isTopicTreeOpen)}
-          className={cn(
-            "fixed left-0 top-[calc(50%+60px)] -translate-y-1/2 z-50",
-            "p-2 rounded-r-xl rounded-l-none",
-            theme.mode === 'light' ? "bg-slate-100 border-slate-300 text-slate-500 hover:text-purple-600 hover:bg-slate-200" : "bg-slate-800/80 border border-l-0 border-slate-700/50 text-slate-400 hover:text-purple-400 hover:bg-slate-700/80",
-            "transition-all duration-200 shadow-lg",
-            isTopicTreeOpen ? "opacity-0 hover:opacity-100" : "opacity-100"
-          )}
-          title={isTopicTreeOpen ? "Collapse Topic Tree" : "Expand Topic Tree"}
-        >
-          {isTopicTreeOpen ? <PanelRightClose className="w-5 h-5" /> : <PanelRightOpen className="w-5 h-5" />}
-        </button>
-
-        {/* Main Layout */}
-        <main className="flex-1 flex flex-col lg:flex-row min-h-0 overflow-hidden">
-          
-          {/* Left Sidebar: Connection & Subs */}
-          <AnimatePresence initial={false}>
-            {isLeftSidebarOpen && (
-              <motion.div
-                initial={{ width: 0, opacity: 0, marginRight: 0 }}
-                animate={{ width: 320, opacity: 1, marginRight: 8 }}
-                exit={{ width: 0, opacity: 0, marginRight: 0 }}
-                transition={{ duration: 0.2, ease: "easeInOut" }}
-                className="shrink-0 h-full overflow-hidden flex flex-col gap-4"
-              >
-                <div className="w-[320px] h-full flex flex-col gap-4 overflow-y-auto custom-scrollbar pb-2">
-                  <div className="flex-1 min-h-[400px]">
-                    <BrokerSidebar
-                      brokers={brokers}
-                      activeBrokerId={activeBrokerId}
-                      status={status}
-                      errorMsg={errorMsg}
-                      subscriptions={subscriptions}
-                      onSelect={handleSelectBroker}
-                      onAdd={openAddModal}
-                      onEdit={openEditModal}
-                      onDelete={handleDeleteBroker}
-                      onSubscribe={handleSubscribe}
-                      onUnsubscribe={handleUnsubscribe}
-                      favoriteTopics={favoriteTopics}
-                      setFavoriteTopics={setFavoriteTopics}
-                      isCollapsed={!isLeftSidebarOpen}
-                      onToggleCollapse={() => setIsLeftSidebarOpen(!isLeftSidebarOpen)}
+            {/* Middle Sidebar: Topic Tree */}
+            <AnimatePresence initial={false}>
+              {isTopicTreeOpen && (
+                <motion.div
+                  initial={{ width: 0, opacity: 0, marginRight: 0 }}
+                  animate={{ width: 320, opacity: 1, marginRight: 8 }}
+                  exit={{ width: 0, opacity: 0, marginRight: 0 }}
+                  transition={{ duration: 0.2, ease: "easeInOut" }}
+                  className="shrink-0 h-full overflow-hidden flex flex-col"
+                >
+                  <div className="w-[320px] h-full pb-2">
+                    <TopicTree 
+                      topics={topics} 
+                      messageCounts={messageCounts} 
+                      selectedTopic={selectedTopic} 
+                      onSelectTopic={setSelectedTopic}
+                      onAddToFavorites={handleAddToFavorites}
+                      isCollapsed={!isTopicTreeOpen}
+                      onToggleCollapse={() => setIsTopicTreeOpen(!isTopicTreeOpen)}
+                      autoExpand={shouldAutoExpandTree}
                     />
                   </div>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
-          {/* Middle Sidebar: Topic Tree */}
-          <AnimatePresence initial={false}>
-            {isTopicTreeOpen && (
-              <motion.div
-                initial={{ width: 0, opacity: 0, marginRight: 0 }}
-                animate={{ width: 320, opacity: 1, marginRight: 8 }}
-                exit={{ width: 0, opacity: 0, marginRight: 0 }}
-                transition={{ duration: 0.2, ease: "easeInOut" }}
-                className="shrink-0 h-full overflow-hidden flex flex-col"
-              >
-                <div className="w-[320px] h-full pb-2">
-                  <TopicTree 
-                    topics={topics} 
-                    messageCounts={messageCounts} 
-                    selectedTopic={selectedTopic} 
-                    onSelectTopic={setSelectedTopic}
-                    onAddToFavorites={handleAddToFavorites}
-                    isCollapsed={!isTopicTreeOpen}
-                    onToggleCollapse={() => setIsTopicTreeOpen(!isTopicTreeOpen)}
-                    autoExpand={shouldAutoExpandTree}
-                  />
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* Main Content: Topic View */}
-          <div className="flex-1 flex flex-col h-full min-w-0 overflow-hidden">
-            <TopicView 
-              topic={selectedTopic} 
-              messages={messages} 
-              onClear={clearMessages} 
-            />
-          </div>
-        </main>
-      </div>
+            {/* Main Content: Topic View */}
+            <div className="flex-1 flex flex-col h-full min-w-0 overflow-hidden">
+              <TopicView 
+                topic={selectedTopic} 
+                messages={messages} 
+                onClear={clearMessages} 
+              />
+            </div>
+          </main>
+        </div>
 
       <BrokerModal
         isOpen={isAddModalOpen}

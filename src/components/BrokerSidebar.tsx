@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Server, Plus, Trash2, Plug, Unplug, AlertCircle, Edit2, PanelLeftClose, PanelLeftOpen, Hash, X, Check } from 'lucide-react';
+import { Server, Plus, Trash2, Plug, Unplug, AlertCircle, Edit2, PanelLeftClose, PanelLeftOpen, Hash, X, Check, Palette } from 'lucide-react';
 import { BrokerConfig } from '../types';
 import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
@@ -26,6 +26,8 @@ interface BrokerSidebarProps {
   setFavoriteTopics: React.Dispatch<React.SetStateAction<string[]>>;
   isCollapsed?: boolean;
   onToggleCollapse?: () => void;
+  onToggleTheme: () => void;
+  themeMode: 'dark' | 'light';
 }
 
 export function BrokerSidebar({
@@ -44,6 +46,8 @@ export function BrokerSidebar({
   setFavoriteTopics,
   isCollapsed = false,
   onToggleCollapse,
+  onToggleTheme,
+  themeMode,
 }: BrokerSidebarProps) {
   const { theme, themeClasses } = useTheme();
   // favoriteTopics state is now managed by parent component via props
@@ -515,6 +519,22 @@ export function BrokerSidebar({
             })
           )}
         </AnimatePresence>
+      </div>
+
+      <div className="flex items-center justify-end p-2">
+        <button
+          onClick={onToggleTheme}
+          title="切换主题"
+          className={cn(
+            "w-10 h-10 rounded-2xl border transition-colors flex items-center justify-center",
+            themeClasses.cardBg,
+            themeClasses.border,
+            themeClasses.text,
+            themeMode === 'light' ? "hover:bg-slate-200" : "hover:bg-slate-700/50"
+          )}
+        >
+          <Palette className="w-5 h-5" />
+        </button>
       </div>
 
       {/* Add Topic Modal */}

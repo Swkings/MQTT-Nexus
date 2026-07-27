@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, ipcMain, Menu } from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import mqtt, { MqttClient, IClientOptions } from 'mqtt';
@@ -19,7 +19,7 @@ const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
 // MQTT 客户端实例
 let mqttClient: MqttClient | null = null;
 
-function createWindow() {
+async function createWindow() {
   const preloadPath = path.join(__dirname, 'preload.js');
   console.log('[Main] Preload path:', preloadPath);
   console.log('[Main] __dirname:', __dirname);
@@ -33,6 +33,7 @@ function createWindow() {
     minHeight: 768,
     frame: true,
     titleBarStyle: 'hiddenInset', // macOS: 窄边框样式
+    autoHideMenuBar: true,
     webPreferences: {
       preload: preloadPath,
       contextIsolation: true,
@@ -42,6 +43,8 @@ function createWindow() {
     icon: path.join(__dirname, '../public/icon.png'),
     backgroundColor: '#0f172a',
   });
+
+  Menu.setApplicationMenu(null);
 
   console.log('[Main] BrowserWindow created with preload:', preloadPath);
 
@@ -66,6 +69,15 @@ function createWindow() {
   // 始终加载本地构建的 HTML 文件，确保 preload 正常工作
   // 开发模式下需要先运行 npm run build
   win.loadFile(path.join(__dirname, '../dist/index.html'));
+
+  // 加载页面：开发时使用 Vite 本地服务器，生产时加载构建输出
+  if (isDev) {
+    const devUrl = `http://localhost:${process.env.VITE_APP_DEFAULT_PORT || 3000}`;
+    console.log('[Main] Loading from Vite dev server:', devUrl);
+    await win.loadURL(devUrl);
+  } else {
+    await win.loadFile(path.join(__dirname, '../dist/index.html'));
+  }
 
   // 开发环境下自动打开开发者工具
   if (isDev) {
