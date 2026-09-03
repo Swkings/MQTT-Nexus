@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { startTransition, useState, useEffect, useCallback, useRef } from 'react';
 import mqtt, { MqttClient, IClientOptions } from 'mqtt';
 
 // 检测是否在 Electron 环境中运行
@@ -18,6 +18,26 @@ export interface MqttMessage {
   previousPayload?: string;
 }
 
+const MESSAGE_BATCH_INTERVAL_MS = 100;
+const MAX_STORED_MESSAGES = 5000;
+
+function limitStoredMessages(messages: MqttMessage[], perTopicLimit: number): MqttMessage[] {
+  const topicCounts = new Map<string, number>();
+  const limitedMessages: MqttMessage[] = [];
+  const normalizedLimit = Math.max(1, perTopicLimit);
+
+  for (const message of messages) {
+    const count = topicCounts.get(message.topic) || 0;
+    if (count >= normalizedLimit) continue;
+
+    topicCounts.set(message.topic, count + 1);
+    limitedMessages.push(message);
+    if (limitedMessages.length >= MAX_STORED_MESSAGES) break;
+  }
+
+  return limitedMessages;
+}
+
 export function useMqtt() {
   const [client, setClient] = useState<MqttClient | null>(null);
   const [status, setStatus] = useState<'disconnected' | 'connecting' | 'connected' | 'error'>('disconnected');
@@ -31,6 +51,10 @@ export function useMqtt() {
   
   const [selectedTopic, _setSelectedTopic] = useState<string | null>(null);
   const selectedTopicRef = useRef<string | null>(null);
+  const pendingMessagesRef = useRef<MqttMessage[]>([]);
+  const messageFlushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const messageSequenceRef = useRef(0);
+  const messageGenerationRef = useRef(0);
 
   // 用于存储 IPC 事件处理函数的引用，以便后续移除
   const ipcEventHandlers = useRef<{
@@ -45,37 +69,90 @@ export function useMqtt() {
     _setSelectedTopic(topic);
     selectedTopicRef.current = topic;
     
-    // When changing topics, enforce the limit on the previously selected topic
     if (topic !== previousTopic) {
-      setMessages(prev => {
-        const counts: Record<string, number> = {};
-        return prev.filter(m => {
-          // Don't filter the newly selected topic
-          if (m.topic === topic) return true;
-          
-          counts[m.topic] = (counts[m.topic] || 0) + 1;
-          return counts[m.topic] <= messageLimitRef.current;
-        });
-      });
+      setMessages(prev => limitStoredMessages(prev, messageLimitRef.current));
     }
   }, []);
 
   const setMessageLimit = useCallback((limit: number) => {
     _setMessageLimit(limit);
     messageLimitRef.current = limit;
-    setMessages(prev => {
-      const counts: Record<string, number> = {};
-      return prev.filter(m => {
-        // Don't filter the currently selected topic
-        if (m.topic === selectedTopicRef.current) return true;
-        
-        counts[m.topic] = (counts[m.topic] || 0) + 1;
-        return counts[m.topic] <= limit;
+    setMessages(prev => limitStoredMessages(prev, limit));
+  }, []);
+
+  const flushPendingMessages = useCallback(() => {
+    const pendingMessages = pendingMessagesRef.current;
+    pendingMessagesRef.current = [];
+    messageFlushTimerRef.current = null;
+    if (pendingMessages.length === 0) return;
+    const messageGeneration = messageGenerationRef.current;
+
+    startTransition(() => {
+      setMessages(prev => {
+        if (messageGeneration !== messageGenerationRef.current) return prev;
+
+        const latestPayloadByTopic = new Map<string, string>();
+        for (const message of prev) {
+          if (!latestPayloadByTopic.has(message.topic)) {
+            latestPayloadByTopic.set(message.topic, message.payload);
+          }
+        }
+
+        const completedMessages = pendingMessages.map(message => {
+          const completedMessage = {
+            ...message,
+            previousPayload: latestPayloadByTopic.get(message.topic)
+          };
+          latestPayloadByTopic.set(message.topic, message.payload);
+          return completedMessage;
+        });
+
+        return limitStoredMessages(
+          [...completedMessages.reverse(), ...prev],
+          messageLimitRef.current
+        );
+      });
+
+      setMessageCounts(prev => {
+        if (messageGeneration !== messageGenerationRef.current) return prev;
+
+        const next = { ...prev };
+        for (const message of pendingMessages) {
+          next[message.topic] = (next[message.topic] || 0) + 1;
+        }
+        return next;
       });
     });
   }, []);
 
+  const enqueueMessage = useCallback((topic: string, payload: string, qos: number) => {
+    messageSequenceRef.current += 1;
+    pendingMessagesRef.current.push({
+      id: `${Date.now()}-${messageSequenceRef.current}`,
+      topic,
+      payload,
+      qos,
+      timestamp: Date.now()
+    });
+
+    if (messageFlushTimerRef.current === null) {
+      messageFlushTimerRef.current = setTimeout(flushPendingMessages, MESSAGE_BATCH_INTERVAL_MS);
+    }
+  }, [flushPendingMessages]);
+
+  const clearPendingMessages = useCallback(() => {
+    messageGenerationRef.current += 1;
+    if (messageFlushTimerRef.current !== null) {
+      clearTimeout(messageFlushTimerRef.current);
+      messageFlushTimerRef.current = null;
+    }
+    pendingMessagesRef.current = [];
+  }, []);
+
+  useEffect(() => clearPendingMessages, [clearPendingMessages]);
+
   const connect = useCallback((url: string, options: IClientOptions) => {
+    clearPendingMessages();
     setStatus('connecting');
     setErrorMsg(null);
     
@@ -157,45 +234,14 @@ export function useMqtt() {
       };
 
       const handleDisconnect = () => {
+        clearPendingMessages();
         setStatus('disconnected');
         setSubscriptions([]);
         setMessageCounts({});
       };
 
       const handleMessage = (topic: string, message: string, qos: number) => {
-        
-        setMessages((prev) => {
-          const prevTopicMessages = prev.filter(m => m.topic === topic);
-          const previousPayload = prevTopicMessages.length > 0 ? prevTopicMessages[0].payload : undefined;
-          
-          const newMessage: MqttMessage = {
-            id: Math.random().toString(36).substring(2, 9),
-            topic,
-            payload: message,
-            qos,
-            timestamp: Date.now(),
-            previousPayload,
-          };
-          
-          let currentTopicCount = 0;
-          const isSelected = selectedTopicRef.current === topic;
-          const limit = isSelected ? Infinity : messageLimitRef.current;
-          
-          const filteredPrev = prev.filter(m => {
-            if (m.topic === topic) {
-              currentTopicCount++;
-              return currentTopicCount < limit;
-            }
-            return true;
-          });
-          
-          return [newMessage, ...filteredPrev];
-        });
-
-        setMessageCounts((prev) => ({
-          ...prev,
-          [topic]: (prev[topic] || 0) + 1
-        }));
+        enqueueMessage(topic, message, qos);
       };
 
       // 保存事件处理器引用
@@ -245,47 +291,15 @@ export function useMqtt() {
       });
 
       mqttClient.on('message', (topic, message, packet) => {
-        const payloadString = message.toString();
-        
-        setMessages((prev) => {
-          const prevTopicMessages = prev.filter(m => m.topic === topic);
-          const previousPayload = prevTopicMessages.length > 0 ? prevTopicMessages[0].payload : undefined;
-          
-          const newMessage: MqttMessage = {
-            id: Math.random().toString(36).substring(2, 9),
-            topic,
-            payload: payloadString,
-            qos: packet.qos,
-            timestamp: Date.now(),
-            previousPayload,
-          };
-          
-          let currentTopicCount = 0;
-          const isSelected = selectedTopicRef.current === topic;
-          const limit = isSelected ? Infinity : messageLimitRef.current;
-          
-          const filteredPrev = prev.filter(m => {
-            if (m.topic === topic) {
-              currentTopicCount++;
-              return currentTopicCount < limit;
-            }
-            return true;
-          });
-          
-          return [newMessage, ...filteredPrev];
-        });
-
-        setMessageCounts((prev) => ({
-          ...prev,
-          [topic]: (prev[topic] || 0) + 1
-        }));
+        enqueueMessage(topic, message.toString(), packet.qos);
       });
 
       setClient(mqttClient);
     }
-  }, [client, status]);
+  }, [client, status, clearPendingMessages, enqueueMessage]);
 
   const disconnect = useCallback(() => {
+    clearPendingMessages();
     const inElectron = isElectron();
     
     if (inElectron) {
@@ -331,7 +345,7 @@ export function useMqtt() {
     setStatus('disconnected');
     setSubscriptions([]);
     setMessageCounts({});
-  }, [client]);
+  }, [client, clearPendingMessages]);
 
   const subscribe = useCallback((topic: string, qos: 0 | 1 | 2 = 0) => {
     const inElectron = isElectron();
@@ -384,10 +398,51 @@ export function useMqtt() {
     }
   }, [client, status]);
 
+  const publish = useCallback(async (topic: string, message: string, qos: 0 | 1 | 2 = 0) => {
+    const trimmedTopic = topic.trim();
+    if (status !== 'connected') {
+      throw new Error('Connect to a broker before publishing');
+    }
+    if (!trimmedTopic) {
+      throw new Error('Topic is required');
+    }
+    if (trimmedTopic.includes('#') || trimmedTopic.includes('+')) {
+      throw new Error('Publish topics cannot contain wildcard characters');
+    }
+
+    if (isElectron()) {
+      const mqttApi = (window as any).electronAPI?.mqtt;
+      if (!mqttApi) {
+        throw new Error('Electron MQTT API is not available');
+      }
+
+      const result = await mqttApi.publish(trimmedTopic, message, qos);
+      if (!result?.success) {
+        throw new Error(result?.error || 'Failed to publish message');
+      }
+      return;
+    }
+
+    if (!client) {
+      throw new Error('MQTT client is not connected');
+    }
+
+    await new Promise<void>((resolve, reject) => {
+      client.publish(trimmedTopic, message, { qos }, (error) => {
+        if (error) {
+          reject(error);
+        } else {
+          resolve();
+        }
+      });
+    });
+  }, [client, status]);
+
   const clearMessages = useCallback(() => {
+    clearPendingMessages();
     setMessages([]);
     setMessageCounts({});
-  }, []);
+  }, [clearPendingMessages]);
 
   return {
     client,
@@ -400,6 +455,7 @@ export function useMqtt() {
     disconnect,
     subscribe,
     unsubscribe,
+    publish,
     clearMessages,
     messageLimit,
     setMessageLimit,

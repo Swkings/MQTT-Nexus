@@ -56,7 +56,7 @@ interface MessageCardProps {
   showDiffByDefault?: boolean;
 }
 
-export function MessageCard({ message, showDiffByDefault = false }: MessageCardProps) {
+export const MessageCard = React.memo(function MessageCard({ message, showDiffByDefault = false }: MessageCardProps) {
   const { theme, themeClasses } = useTheme();
   const [expanded, setExpanded] = useState(false);
   const [viewMode, setViewMode] = useState<'raw' | 'formatted' | 'diff'>('formatted');
@@ -64,18 +64,20 @@ export function MessageCard({ message, showDiffByDefault = false }: MessageCardP
   const [showSelectedOnly, setShowSelectedOnly] = useState(false);
   const [showFieldPicker, setShowFieldPicker] = useState(false);
 
+  const parsedJson = useMemo(() => {
+    const payload = message.payload.trim();
+    try {
+      return { isJson: true, value: JSON.parse(payload) };
+    } catch {
+      return { isJson: false, value: null };
+    }
+  }, [message.payload]);
+
   // 检测数据类型
   const dataType = useMemo(() => {
+    if (parsedJson.isJson) return 'json';
+
     const payload = message.payload.trim();
-    
-    // 尝试 JSON
-    try {
-      JSON.parse(payload);
-      return 'json';
-    } catch {
-      // 不是 JSON
-    }
-    
     // 尝试 XML
     if (payload.startsWith('<?xml') || (payload.startsWith('<') && payload.endsWith('>'))) {
       return 'xml';
@@ -88,26 +90,19 @@ export function MessageCard({ message, showDiffByDefault = false }: MessageCardP
     
     // 纯文本
     return 'text';
-  }, [message.payload]);
+  }, [message.payload, parsedJson.isJson]);
 
   const isJson = dataType === 'json';
   const isXml = dataType === 'xml';
   const isHtml = dataType === 'html';
   const isText = dataType === 'text';
 
-  const parsedPayload = useMemo(() => {
-    if (!isJson) return null;
-    try {
-      return JSON.parse(message.payload);
-    } catch {
-      return null;
-    }
-  }, [message.payload, isJson]);
+  const parsedPayload = isJson ? parsedJson.value : null;
 
   const allFields = useMemo(() => {
-    if (!parsedPayload) return [];
+    if (!expanded || !parsedPayload) return [];
     return getAllPaths(parsedPayload);
-  }, [parsedPayload]);
+  }, [expanded, parsedPayload]);
 
   const filteredPayload = useMemo(() => {
     if (!showSelectedOnly || selectedFields.length === 0 || !parsedPayload) {
@@ -125,6 +120,7 @@ export function MessageCard({ message, showDiffByDefault = false }: MessageCardP
   }, [parsedPayload, selectedFields, showSelectedOnly]);
 
   const formattedPayload = useMemo(() => {
+    if (!expanded) return '';
     if (isJson) {
       try {
         const data = showSelectedOnly ? filteredPayload : parsedPayload;
@@ -139,7 +135,7 @@ export function MessageCard({ message, showDiffByDefault = false }: MessageCardP
     }
     // 纯文本
     return message.payload;
-  }, [message.payload, isJson, isXml, isHtml, parsedPayload, filteredPayload, showSelectedOnly]);
+  }, [expanded, message.payload, isJson, isXml, isHtml, parsedPayload, filteredPayload, showSelectedOnly]);
 
   const handleCopy = (text: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
@@ -392,4 +388,4 @@ export function MessageCard({ message, showDiffByDefault = false }: MessageCardP
       </AnimatePresence>
     </motion.div>
   );
-}
+});

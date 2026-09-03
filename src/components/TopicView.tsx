@@ -81,6 +81,7 @@ export function TopicView({ topic, messages, onClear }: TopicViewProps) {
   const [isCodeGenOpen, setIsCodeGenOpen] = useState(false);
   const [historyWidth, setHistoryWidth] = useState(500);
   const [isResizing, setIsResizing] = useState(false);
+  const [chartNow, setChartNow] = useState(Date.now());
 
   // Latest Message specific states
   const [selectedFields, setSelectedFields] = useState<string[]>([]);
@@ -127,6 +128,14 @@ export function TopicView({ topic, messages, onClear }: TopicViewProps) {
       }
     };
   }, []);
+
+  React.useEffect(() => {
+    if (isPaused || activeChartPaths.length === 0) return;
+
+    setChartNow(Date.now());
+    const timer = setInterval(() => setChartNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, [isPaused, activeChartPaths.length]);
 
   const handlePauseToggle = () => {
     if (isPaused) {
@@ -216,15 +225,23 @@ export function TopicView({ topic, messages, onClear }: TopicViewProps) {
     );
   };
 
+  const parsedChartMessages = useMemo(() => {
+    if (activeChartPaths.length === 0) return [];
+
+    return [...topicMessages]
+      .sort((a, b) => a.timestamp - b.timestamp)
+      .map(message => {
+        try {
+          return { message, payload: JSON.parse(message.payload) };
+        } catch {
+          return { message, payload: null };
+        }
+      });
+  }, [topicMessages, activeChartPaths.length]);
+
   const getChartData = (path: string) => {
-    if (!topicMessages.length) return [];
-    
-    // Sort chronologically (oldest to newest)
-    const sortedMessages = [...topicMessages].sort((a, b) => a.timestamp - b.timestamp);
-    
-    return sortedMessages.map(msg => {
+    return parsedChartMessages.map(({ message, payload }) => {
       try {
-        const payload = JSON.parse(msg.payload);
         const keys = path.split('.');
         let val: any = payload;
         
@@ -271,12 +288,12 @@ export function TopicView({ topic, messages, onClear }: TopicViewProps) {
         }
         
         return {
-          time: new Date(msg.timestamp).toLocaleTimeString(),
-          timestamp: msg.timestamp,
+          time: new Date(message.timestamp).toLocaleTimeString(),
+          timestamp: message.timestamp,
           value: val
         };
       } catch {
-        return { time: new Date(msg.timestamp).toLocaleTimeString(), timestamp: msg.timestamp, value: null };
+        return { time: new Date(message.timestamp).toLocaleTimeString(), timestamp: message.timestamp, value: null };
       }
     }).filter(d => d.value !== null && d.value !== undefined);
   };
@@ -689,7 +706,7 @@ export function TopicView({ topic, messages, onClear }: TopicViewProps) {
                         path={path} 
                         onClose={() => toggleChartPath(path)} 
                         compact
-                        isPaused={isPaused}
+                        now={chartNow}
                       />
                     </div>
                   ))}
@@ -773,13 +790,7 @@ export function TopicView({ topic, messages, onClear }: TopicViewProps) {
       <CodeGenModal 
         isOpen={isCodeGenOpen} 
         onClose={() => setIsCodeGenOpen(false)} 
-        json={latestMessage ? (() => {
-          try {
-            return JSON.parse(latestMessage.payload);
-          } catch {
-            return null;
-          }
-        })() : null}
+        json={parsedLatestPayload}
         topicName={topic}
       />
     </div>

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Copy, Check, Code2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { generateCode, Language } from '../lib/codeGen';
@@ -44,15 +45,15 @@ export function CodeGenModal({ isOpen, onClose, json, topicName }: CodeGenModalP
 
   if (!isOpen) return null;
 
-  return (
+  return createPortal(
     <AnimatePresence>
-      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 backdrop-blur-sm" style={{ backgroundColor: `rgba(0, 0, 0, ${theme.mode === 'light' ? 0.3 : 0.6})` }}>
+      <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 backdrop-blur-sm" style={{ backgroundColor: `rgba(0, 0, 0, ${theme.mode === 'light' ? 0.3 : 0.6})` }}>
         <motion.div
           initial={{ opacity: 0, scale: 0.95, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
           className={cn(
-            "border rounded-2xl shadow-2xl w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden",
+            "border rounded-2xl shadow-2xl w-[1100px] h-[800px] max-w-[calc(100vw-2rem)] max-h-[calc(100vh-2rem)] flex-none flex flex-col overflow-hidden",
             themeClasses.cardBg,
             themeClasses.border,
             themeClasses.shadow
@@ -182,6 +183,7 @@ export function CodeGenModal({ isOpen, onClose, json, topicName }: CodeGenModalP
           </div>
         </motion.div>
       </div>
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 }

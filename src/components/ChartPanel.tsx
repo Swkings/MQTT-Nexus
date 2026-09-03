@@ -20,35 +20,11 @@ interface ChartPanelProps {
   path: string;
   onClose: () => void;
   compact?: boolean;
-  isPaused?: boolean;
+  now: number;
 }
 
-export function ChartPanel({ data, path, onClose, compact = false, isPaused = false }: ChartPanelProps) {
+export function ChartPanel({ data, path, onClose, compact = false, now }: ChartPanelProps) {
   const { theme } = useTheme();
-  const [now, setNow] = React.useState(Date.now());
-  const [frozenNow, setFrozenNow] = React.useState<number | null>(null);
-
-  // Update 'now' every second, but freeze if paused
-  React.useEffect(() => {
-    const timer = setInterval(() => {
-      if (!isPaused) {
-        setNow(Date.now());
-      }
-    }, 1000);
-    return () => clearInterval(timer);
-  }, [isPaused]);
-
-  // Freeze or unfreeze the chart when pause state changes
-  React.useEffect(() => {
-    if (isPaused) {
-      setFrozenNow(now);
-    } else {
-      setFrozenNow(null);
-    }
-  }, [isPaused, now]);
-
-  // Use frozen time if paused, otherwise use current time
-  const displayNow = isPaused && frozenNow !== null ? frozenNow : now;
 
   // Determine if data is mostly numeric or categorical
   const isNumeric = useMemo(() => {
@@ -97,12 +73,12 @@ export function ChartPanel({ data, path, onClose, compact = false, isPaused = fa
   }, [chartData, isNumeric, categoryIndexMap]);
 
   const xDomain = useMemo(() => {
-    if (chartData.length === 0) return [displayNow, displayNow];
+    if (chartData.length === 0) return [now, now];
     const min = chartData[0].timestamp;
     // Use current time as max to keep the chart moving and show duration
-    const max = Math.max(displayNow, chartData[chartData.length - 1].timestamp);
+    const max = Math.max(now, chartData[chartData.length - 1].timestamp);
     return [min, max];
-  }, [chartData, displayNow]);
+  }, [chartData, now]);
 
   // Y-axis domain for scatter plot (numeric indices)
   const yDomain = useMemo(() => {

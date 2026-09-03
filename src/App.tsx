@@ -9,7 +9,8 @@ import { BrokerSidebar } from './components/BrokerSidebar';
 import { BrokerModal } from './components/BrokerModal';
 import { TopicTree } from './components/TopicTree';
 import { TopicView } from './components/TopicView';
-import { PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen } from 'lucide-react';
+import { PublishPanel } from './components/PublishPanel';
+import { MessagesSquare, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Send } from 'lucide-react';
 import { BrokerConfig, SavedHost, SavedCredential } from './types';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from './lib/utils';
@@ -40,6 +41,7 @@ export default function App() {
     disconnect,
     subscribe,
     unsubscribe,
+    publish,
     clearMessages,
     messageLimit,
     setMessageLimit,
@@ -131,6 +133,7 @@ export default function App() {
   const [shouldAutoExpandTree, setShouldAutoExpandTree] = useState(false);  // 新增：控制自动展开
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingBroker, setEditingBroker] = useState<BrokerConfig | null>(null);
+  const [activeMainView, setActiveMainView] = useState<'messages' | 'publish'>('messages');
   
   const favoriteTopics = useMemo(
     () => brokers.find(broker => broker.id === activeBrokerId)?.favoriteTopics || [],
@@ -175,6 +178,11 @@ export default function App() {
   };
 
   const topics = useMemo(() => Object.keys(messageCounts), [messageCounts]);
+  const publishTopics = useMemo(() => Array.from(new Set([
+    ...topics,
+    ...favoriteTopics,
+    ...subscriptions
+  ])).filter(topic => topic && !topic.includes('#') && !topic.includes('+')).sort(), [topics, favoriteTopics, subscriptions]);
 
   // Subscribe to broker's saved subscriptions when connected
   useEffect(() => {
@@ -426,11 +434,57 @@ export default function App() {
 
             {/* Main Content: Topic View */}
             <div className="flex-1 flex flex-col h-full min-w-0 overflow-hidden">
-              <TopicView 
-                topic={selectedTopic} 
-                messages={messages} 
-                onClear={clearMessages} 
-              />
+              <div className={cn(
+                "shrink-0 flex items-center gap-1.5 p-1.5 mb-2 border rounded-xl self-start",
+                themeClasses.border,
+                themeClasses.panelBg
+              )}>
+                <button
+                  type="button"
+                  onClick={() => setActiveMainView('messages')}
+                  className={cn(
+                    "flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors",
+                    activeMainView === 'messages'
+                      ? theme.mode === 'light' ? "bg-cyan-100 text-cyan-700" : "bg-cyan-500/20 text-cyan-300"
+                      : cn(themeClasses.textSecondary, theme.mode === 'light' ? "hover:bg-slate-200" : "hover:bg-slate-800")
+                  )}
+                >
+                  <MessagesSquare className="w-4 h-4" />
+                  Messages
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveMainView('publish')}
+                  className={cn(
+                    "flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors",
+                    activeMainView === 'publish'
+                      ? theme.mode === 'light' ? "bg-purple-100 text-purple-700" : "bg-purple-500/20 text-purple-300"
+                      : cn(themeClasses.textSecondary, theme.mode === 'light' ? "hover:bg-slate-200" : "hover:bg-slate-800")
+                  )}
+                >
+                  <Send className="w-4 h-4" />
+                  Publish
+                </button>
+              </div>
+
+              <div className="flex-1 min-h-0 overflow-hidden">
+                {activeMainView === 'messages' ? (
+                  <TopicView
+                    topic={selectedTopic}
+                    messages={messages}
+                    onClear={clearMessages}
+                  />
+                ) : (
+                  <PublishPanel
+                    status={status}
+                    topics={publishTopics}
+                    messages={messages}
+                    selectedTopic={selectedTopic}
+                    onClear={clearMessages}
+                    onPublish={publish}
+                  />
+                )}
+              </div>
             </div>
           </main>
         </div>
