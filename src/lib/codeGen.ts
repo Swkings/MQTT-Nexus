@@ -78,7 +78,21 @@ function generateGo(json: any, name: string): string {
     }
   }
 
-  build(json, toPascalCase(name));
+  const rootName = toPascalCase(name);
+  if (Array.isArray(json)) {
+    let itemType = 'interface{}';
+    if (json.length > 0) {
+      if (json[0] !== null && typeof json[0] === 'object' && !Array.isArray(json[0])) {
+        itemType = `${rootName}Item`;
+        build(json[0], itemType);
+      } else {
+        itemType = goType(json[0]);
+      }
+    }
+    structs.push(`type ${rootName} []${itemType}`);
+  } else {
+    build(json, rootName);
+  }
   return structs.reverse().join('\n\n');
 }
 
@@ -126,7 +140,21 @@ function generatePython(json: any, name: string): string {
   }
 
   classes.push('from dataclasses import dataclass\nfrom typing import List, Any\n');
-  build(json, toPascalCase(name));
+  const rootName = toPascalCase(name);
+  if (Array.isArray(json)) {
+    let itemType = 'Any';
+    if (json.length > 0) {
+      if (json[0] !== null && typeof json[0] === 'object' && !Array.isArray(json[0])) {
+        itemType = `${rootName}Item`;
+        build(json[0], itemType);
+      } else {
+        itemType = pyType(json[0]);
+      }
+    }
+    classes.push(`${rootName} = List[${itemType}]`);
+  } else {
+    build(json, rootName);
+  }
   return classes.join('\n\n');
 }
 
@@ -173,7 +201,21 @@ function generateTypeScript(json: any, name: string): string {
     }
   }
 
-  build(json, toPascalCase(name));
+  const rootName = toPascalCase(name);
+  if (Array.isArray(json)) {
+    let itemType = 'any';
+    if (json.length > 0) {
+      if (json[0] !== null && typeof json[0] === 'object' && !Array.isArray(json[0])) {
+        itemType = `${rootName}Item`;
+        build(json[0], itemType);
+      } else {
+        itemType = tsType(json[0]);
+      }
+    }
+    interfaces.push(`export type ${rootName} = ${itemType}[];`);
+  } else {
+    build(json, rootName);
+  }
   return interfaces.reverse().join('\n\n');
 }
 
@@ -221,7 +263,21 @@ function generateCpp(json: any, name: string): string {
   }
 
   structs.push('#include <string>\n#include <vector>\n#include <cstdint>\n#include <nlohmann/json.hpp>\n');
-  build(json, toPascalCase(name));
+  const rootName = toPascalCase(name);
+  if (Array.isArray(json)) {
+    let itemType = 'nlohmann::json';
+    if (json.length > 0) {
+      if (json[0] !== null && typeof json[0] === 'object' && !Array.isArray(json[0])) {
+        itemType = `${rootName}Item`;
+        build(json[0], itemType);
+      } else {
+        itemType = cppType(json[0]);
+      }
+    }
+    structs.push(`using ${rootName} = std::vector<${itemType}>;`);
+  } else {
+    build(json, rootName);
+  }
   return structs.join('\n\n');
 }
 
@@ -268,7 +324,21 @@ function generateJava(json: any, name: string): string {
     }
   }
 
-  classes.push('import java.util.List;\n');
-  build(json, toPascalCase(name));
+  classes.push('import java.util.ArrayList;\nimport java.util.List;\n');
+  const rootName = toPascalCase(name);
+  if (Array.isArray(json)) {
+    let itemType = 'Object';
+    if (json.length > 0) {
+      if (json[0] !== null && typeof json[0] === 'object' && !Array.isArray(json[0])) {
+        itemType = `${rootName}Item`;
+        build(json[0], itemType);
+      } else {
+        itemType = javaType(json[0]);
+      }
+    }
+    classes.push(`public class ${rootName} extends ArrayList<${itemType}> {\n}`);
+  } else {
+    build(json, rootName);
+  }
   return classes.join('\n\n');
 }

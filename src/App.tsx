@@ -48,6 +48,19 @@ export default function App() {
   } = useMqtt();
 
   const [brokers, setBrokers] = useState<BrokerConfig[]>(() => {
+    let legacyFavoriteTopics: string[] = [];
+    const savedFavoriteTopics = localStorage.getItem('mqtt_favorite_topics');
+    if (savedFavoriteTopics) {
+      try {
+        const parsedFavoriteTopics = JSON.parse(savedFavoriteTopics);
+        if (Array.isArray(parsedFavoriteTopics)) {
+          legacyFavoriteTopics = parsedFavoriteTopics.filter((topic): topic is string => typeof topic === 'string');
+        }
+      } catch (e) {
+        // Ignore invalid legacy favorite topic data
+      }
+    }
+
     const saved = localStorage.getItem('mqtt_brokers');
     if (saved) {
       try {
@@ -63,13 +76,26 @@ export default function App() {
                 host: u.hostname,
                 port: parseInt(u.port) || (u.protocol === 'wss:' ? 443 : 80),
                 path: u.pathname || '/mqtt',
-                subscriptions: b.subscriptions || ['#']
+                subscriptions: b.subscriptions || ['#'],
+                favoriteTopics: Array.isArray(b.favoriteTopics) ? b.favoriteTopics : [...legacyFavoriteTopics]
               };
             } catch (e) {
-              return { ...b, protocol: 'ws', host: 'localhost', port: 8083, path: '/mqtt', subscriptions: ['#'] };
+              return {
+                ...b,
+                protocol: 'ws',
+                host: 'localhost',
+                port: 8083,
+                path: '/mqtt',
+                subscriptions: ['#'],
+                favoriteTopics: Array.isArray(b.favoriteTopics) ? b.favoriteTopics : [...legacyFavoriteTopics]
+              };
             }
           }
-          return { ...b, subscriptions: b.subscriptions || ['#'] };
+          return {
+            ...b,
+            subscriptions: b.subscriptions || ['#'],
+            favoriteTopics: Array.isArray(b.favoriteTopics) ? b.favoriteTopics : [...legacyFavoriteTopics]
+          };
         });
       } catch (e) {
         // Fallback if JSON parse fails
@@ -83,7 +109,8 @@ export default function App() {
       port: 8083,
       path: '/mqtt',
       clientId: `${MQTTClientPrefix}${Math.random().toString(16).substr(2, 8)}`,
-      subscriptions: ['#']
+      subscriptions: ['#'],
+      favoriteTopics: [...legacyFavoriteTopics]
     }];
   });
 
@@ -105,11 +132,24 @@ export default function App() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingBroker, setEditingBroker] = useState<BrokerConfig | null>(null);
   
-  // Favorite topics management - lifted to App level
-  const [favoriteTopics, setFavoriteTopics] = useState<string[]>(() => {
-    const saved = localStorage.getItem('mqtt_favorite_topics');
-    return saved ? JSON.parse(saved) : [];
-  });
+  const favoriteTopics = useMemo(
+    () => brokers.find(broker => broker.id === activeBrokerId)?.favoriteTopics || [],
+    [brokers, activeBrokerId]
+  );
+
+  const setFavoriteTopics: React.Dispatch<React.SetStateAction<string[]>> = (value) => {
+    if (!activeBrokerId) return;
+
+    setBrokers(prev => prev.map(broker => {
+      if (broker.id !== activeBrokerId) return broker;
+
+      const currentFavoriteTopics = broker.favoriteTopics || [];
+      const nextFavoriteTopics = typeof value === 'function'
+        ? value(currentFavoriteTopics)
+        : value;
+      return { ...broker, favoriteTopics: nextFavoriteTopics };
+    }));
+  };
 
   useEffect(() => {
     localStorage.setItem('mqtt_brokers', JSON.stringify(brokers));
@@ -122,10 +162,6 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('mqtt_saved_credentials', JSON.stringify(savedCredentials));
   }, [savedCredentials]);
-
-  useEffect(() => {
-    localStorage.setItem('mqtt_favorite_topics', JSON.stringify(favoriteTopics));
-  }, [favoriteTopics]);
 
   const handleAddToFavorites = (topic: string, isWildcard: boolean = false) => {
     // Determine the actual topic path to add
@@ -206,7 +242,8 @@ export default function App() {
       // Add new
       const newBroker: BrokerConfig = {
         ...brokerData,
-        id: Math.random().toString(36).substr(2, 9)
+        id: Math.random().toString(36).substr(2, 9),
+        favoriteTopics: []
       };
       setBrokers(prev => [...prev, newBroker]);
     }
@@ -414,4 +451,3 @@ export default function App() {
     </ThemeProvider>
   );
 }
-

@@ -12,6 +12,7 @@ export interface BrokerConfig {
   username?: string;
   password?: string;
   subscriptions?: string[];
+  favoriteTopics?: string[];
 }
 
 export interface SavedHost {
