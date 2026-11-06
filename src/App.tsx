@@ -7,6 +7,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useMqtt } from './hooks/useMqtt';
 import { BrokerSidebar } from './components/BrokerSidebar';
 import { BrokerModal } from './components/BrokerModal';
+import { LibraryManager } from './components/LibraryManager';
 import { TopicTree } from './components/TopicTree';
 import { TopicView } from './components/TopicView';
 import { PublishPanel } from './components/PublishPanel';
@@ -198,6 +199,7 @@ export default function App() {
   const [isTopicTreeOpen, setIsTopicTreeOpen] = useState(false);  // 默认关闭
   const [shouldAutoExpandTree, setShouldAutoExpandTree] = useState(false);  // 新增：控制自动展开
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isLibraryManagerOpen, setIsLibraryManagerOpen] = useState(false);
   const [editingBroker, setEditingBroker] = useState<BrokerConfig | null>(null);
   const [activeMainView, setActiveMainView] = useState<'messages' | 'publish'>('messages');
   const [configFeedback, setConfigFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
@@ -508,8 +510,8 @@ export default function App() {
                   transition={{ duration: 0.2, ease: "easeInOut" }}
                   className="shrink-0 h-full overflow-hidden flex flex-col gap-4"
                 >
-                  <div className="w-[320px] h-full flex flex-col gap-4 overflow-y-auto custom-scrollbar pb-2">
-                    <div className="flex-1 min-h-[400px]">
+                  <div className="w-[320px] h-full flex flex-col gap-4">
+                    <div className="flex-1 min-h-0">
                       <BrokerSidebar
                         brokers={brokers}
                         activeBrokerId={activeBrokerId}
@@ -527,7 +529,7 @@ export default function App() {
                         isCollapsed={!isLeftSidebarOpen}
                         onToggleCollapse={() => setIsLeftSidebarOpen(!isLeftSidebarOpen)}
                         onToggleTheme={handleThemeToggle}
-                        themeMode={theme.mode}
+                        onOpenLibrary={() => setIsLibraryManagerOpen(true)}
                         onExportConfig={handleExportConfig}
                         onImportConfig={handleImportConfig}
                         configFeedback={configFeedback}
@@ -635,6 +637,16 @@ export default function App() {
         savedTopicTemplates={savedTopicTemplates}
         onSaveTopicTemplate={(template) => setSavedTopicTemplates(prev => [...prev, template])}
         onDeleteTopicTemplate={(id) => setSavedTopicTemplates(prev => prev.filter(template => template.id !== id))}
+      />
+      <LibraryManager
+        isOpen={isLibraryManagerOpen}
+        onClose={() => setIsLibraryManagerOpen(false)}
+        hosts={savedHosts}
+        setHosts={setSavedHosts}
+        credentials={savedCredentials}
+        setCredentials={setSavedCredentials}
+        topicTemplates={savedTopicTemplates}
+        setTopicTemplates={setSavedTopicTemplates}
       />
     </div>
     </ThemeProvider>

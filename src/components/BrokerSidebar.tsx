@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Server, Plus, Trash2, Plug, Unplug, AlertCircle, Edit2, PanelLeftClose, PanelLeftOpen, Hash, X, Check, Palette, Download, Upload } from 'lucide-react';
+import { Server, Plus, Trash2, Plug, Unplug, AlertCircle, Edit2, PanelLeftClose, PanelLeftOpen, Hash, X, Check, Palette, Download, Upload, Library } from 'lucide-react';
 import { BrokerConfig } from '../types';
 import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
@@ -27,7 +27,7 @@ interface BrokerSidebarProps {
   isCollapsed?: boolean;
   onToggleCollapse?: () => void;
   onToggleTheme: () => void;
-  themeMode: 'dark' | 'light';
+  onOpenLibrary: () => void;
   onExportConfig: () => void;
   onImportConfig: (file: File) => Promise<void>;
   configFeedback: { type: 'success' | 'error'; message: string } | null;
@@ -50,7 +50,7 @@ export function BrokerSidebar({
   isCollapsed = false,
   onToggleCollapse,
   onToggleTheme,
-  themeMode,
+  onOpenLibrary,
   onExportConfig,
   onImportConfig,
   configFeedback,
@@ -172,36 +172,6 @@ export function BrokerSidebar({
         </h2>
         <div className="flex items-center gap-1">
           <button
-            onClick={onExportConfig}
-            className={cn("p-1.5 rounded-md transition-colors", themeClasses.textSecondary, "hover:text-cyan-400 hover:bg-cyan-500/10")}
-            title="Export configuration (includes saved credentials)"
-            aria-label="Export configuration"
-          >
-            <Download className="w-4 h-4" />
-          </button>
-          <button
-            onClick={() => configFileInputRef.current?.click()}
-            className={cn("p-1.5 rounded-md transition-colors", themeClasses.textSecondary, "hover:text-cyan-400 hover:bg-cyan-500/10")}
-            title="Import configuration from JSON"
-            aria-label="Import configuration"
-          >
-            <Upload className="w-4 h-4" />
-          </button>
-          <input ref={configFileInputRef} type="file" accept=".json,application/json" className="hidden" onChange={handleConfigFileChange} />
-          {onToggleCollapse && (
-            <button
-              onClick={onToggleCollapse}
-              className={cn(
-                "p-1.5 rounded-md transition-colors",
-                themeClasses.textSecondary,
-                "hover:text-cyan-400 hover:bg-cyan-500/10"
-              )}
-              title={isCollapsed ? "Expand Brokers" : "Collapse Brokers"}
-            >
-              {isCollapsed ? <PanelLeftOpen className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}
-            </button>
-          )}
-          <button
             onClick={onAdd}
             className={cn(
               "p-1.5 rounded-md transition-colors",
@@ -212,6 +182,20 @@ export function BrokerSidebar({
           >
             <Plus className="w-4 h-4" />
           </button>
+          {onToggleCollapse && (
+            <button
+              onClick={onToggleCollapse}
+              className={cn(
+                "p-1.5 rounded-md transition-colors",
+                themeClasses.textSecondary,
+                "hover:text-cyan-400 hover:bg-cyan-500/10"
+              )}
+              title={isCollapsed ? "Expand Brokers" : "Collapse Brokers"}
+              aria-label={isCollapsed ? "Expand Brokers" : "Collapse Brokers"}
+            >
+              {isCollapsed ? <PanelLeftOpen className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}
+            </button>
+          )}
         </div>
       </div>
 
@@ -563,19 +547,40 @@ export function BrokerSidebar({
         </AnimatePresence>
       </div>
 
-      <div className="flex items-center justify-end p-2">
+      <div className="flex items-center justify-between p-2">
+        <div className="flex items-center gap-1">
+          <button
+            onClick={onExportConfig}
+            className={cn("p-2 rounded-md transition-colors", themeClasses.textSecondary, "hover:text-cyan-400 hover:bg-cyan-500/10")}
+            title="Export configuration (includes saved credentials)"
+            aria-label="Export configuration"
+          >
+            <Download className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => configFileInputRef.current?.click()}
+            className={cn("p-2 rounded-md transition-colors", themeClasses.textSecondary, "hover:text-cyan-400 hover:bg-cyan-500/10")}
+            title="Import configuration from JSON"
+            aria-label="Import configuration"
+          >
+            <Upload className="w-4 h-4" />
+          </button>
+          <button
+            onClick={onOpenLibrary}
+            className={cn("p-2 rounded-md transition-colors", themeClasses.textSecondary, "hover:text-cyan-400 hover:bg-cyan-500/10")}
+            title="Manage saved libraries"
+            aria-label="Manage saved libraries"
+          >
+            <Library className="w-4 h-4" />
+          </button>
+          <input ref={configFileInputRef} type="file" accept=".json,application/json" className="hidden" onChange={handleConfigFileChange} />
+        </div>
         <button
           onClick={onToggleTheme}
           title="切换主题"
-          className={cn(
-            "w-10 h-10 rounded-2xl border transition-colors flex items-center justify-center",
-            themeClasses.cardBg,
-            themeClasses.border,
-            themeClasses.text,
-            themeMode === 'light' ? "hover:bg-slate-200" : "hover:bg-slate-700/50"
-          )}
+          className={cn("p-2 rounded-md transition-colors", themeClasses.textSecondary, "hover:text-cyan-400 hover:bg-cyan-500/10")}
         >
-          <Palette className="w-5 h-5" />
+          <Palette className="w-4 h-4" />
         </button>
       </div>
 
