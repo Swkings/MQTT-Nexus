@@ -1,0 +1,51 @@
+name: Build macOS Apple Silicon
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/build-macos-arm64.yml'
+      - 'electron/**'
+      - 'public/**'
+      - 'src/**'
+      - 'electron-builder.json'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'tsconfig.json'
+      - 'vite.config.ts'
+
+jobs:
+  build:
+    runs-on: macos-latest
+    permissions:
+      contents: read
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npx tsc -p electron/tsconfig.json
+      - run: npx electron-builder --mac dmg zip --arm64 --publish never
+      - name: Verify Apple Silicon package
+        shell: bash
+        run: |
+          set -euo pipefail
+          app='release/mac-arm64/MQTT Nexus.app'
+          test -d "$app"
+          lipo -archs "$app/Contents/MacOS/MQTT Nexus" | grep -qw arm64
+          find release -maxdepth 1 -name '*arm64.dmg' -print -quit | grep -q .
+          find release -maxdepth 1 -name '*arm64.zip' -print -quit | grep -q .
+          shasum -a 256 release/*arm64.dmg release/*arm64.zip > release/SHA256SUMS-arm64.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MQTT-Nexus-macOS-arm64
+          path: |
+            release/*arm64.dmg
+            release/*arm64.zip
+            release/SHA256SUMS-arm64.txt
+          if-no-files-found: error
