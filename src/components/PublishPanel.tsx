@@ -65,7 +65,12 @@ export function PublishPanel({ status, topics, messages, selectedTopic, onClear,
     setIsPublishing(true);
     try {
       await onPublish(targetTopic, message, qos);
-      setFeedback({ type: 'success', message: `Message published to ${targetTopic}.` });
+      setFeedback({
+        type: 'success',
+        message: qos === 0
+          ? `Message sent to ${targetTopic}. QoS 0 has no broker delivery acknowledgment.`
+          : `Broker acknowledged the message on ${targetTopic}.`
+      });
     } catch (error) {
       setFeedback({
         type: 'error',

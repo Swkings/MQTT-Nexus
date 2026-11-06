@@ -11,12 +11,73 @@ import { TopicTree } from './components/TopicTree';
 import { TopicView } from './components/TopicView';
 import { PublishPanel } from './components/PublishPanel';
 import { MessagesSquare, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Send } from 'lucide-react';
-import { BrokerConfig, SavedHost, SavedCredential } from './types';
+import { BrokerConfig, SavedHost, SavedCredential, SavedTopicTemplate } from './types';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from './lib/utils';
 import { loadTheme, saveTheme, ThemeConfig, getThemeClasses } from './lib/theme';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { MQTTClientPrefix } from './etc/config';
+
+interface AppConfigBackup {
+  format: 'mqtt-nexus-config';
+  version: 1;
+  exportedAt: string;
+  data: {
+    brokers: BrokerConfig[];
+    savedHosts: SavedHost[];
+    savedCredentials: SavedCredential[];
+    savedTopicTemplates: SavedTopicTemplate[];
+    theme: ThemeConfig;
+  };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function isStringArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every(item => typeof item === 'string');
+}
+
+function isAppConfigBackup(value: unknown): value is AppConfigBackup {
+  if (!isRecord(value) || value.format !== 'mqtt-nexus-config' || value.version !== 1 || !isRecord(value.data)) {
+    return false;
+  }
+
+  const { brokers, savedHosts, savedCredentials, savedTopicTemplates, theme } = value.data;
+  return Array.isArray(brokers) && brokers.every(broker =>
+    isRecord(broker) && typeof broker.id === 'string' && typeof broker.name === 'string' &&
+    (typeof broker.url === 'string' || (typeof broker.protocol === 'string' && typeof broker.host === 'string' &&
+      typeof broker.port === 'number' && typeof broker.path === 'string' && typeof broker.clientId === 'string')) &&
+    (broker.username === undefined || typeof broker.username === 'string') &&
+    (broker.password === undefined || typeof broker.password === 'string') &&
+    (broker.subscriptions === undefined || isStringArray(broker.subscriptions)) &&
+    (broker.favoriteTopics === undefined || isStringArray(broker.favoriteTopics))
+  ) && Array.isArray(savedHosts) && savedHosts.every(host =>
+    isRecord(host) && typeof host.id === 'string' && typeof host.alias === 'string' && typeof host.host === 'string'
+  ) && Array.isArray(savedCredentials) && savedCredentials.every(credential =>
+    isRecord(credential) && typeof credential.id === 'string' && typeof credential.alias === 'string' &&
+    (credential.username === undefined || typeof credential.username === 'string') &&
+    (credential.password === undefined || typeof credential.password === 'string')
+  ) && Array.isArray(savedTopicTemplates) && savedTopicTemplates.every(template =>
+    isRecord(template) && typeof template.id === 'string' && typeof template.alias === 'string' && isStringArray(template.topics)
+  ) && isRecord(theme) && (theme.mode === 'dark' || theme.mode === 'light') &&
+    (theme.overlay === 'opaque' || theme.overlay === 'transparent');
+}
+
+function matchesTopicFilter(filter: string, topic: string): boolean {
+  const filterLevels = filter.split('/');
+  const topicLevels = topic.split('/');
+  if (topic.startsWith('$') && (filterLevels[0] === '#' || filterLevels[0] === '+')) return false;
+
+  for (let index = 0; index < filterLevels.length; index += 1) {
+    if (filterLevels[index] === '#' && index === filterLevels.length - 1) return true;
+    if (index >= topicLevels.length) return false;
+    if (filterLevels[index] !== '+' && filterLevels[index] !== topicLevels[index]) return false;
+  }
+
+  return filterLevels.length === topicLevels.length;
+}
 
 export default function App() {
   // Theme states - 移到最前面
@@ -88,14 +149,14 @@ export default function App() {
                 host: 'localhost',
                 port: 8083,
                 path: '/mqtt',
-                subscriptions: ['#'],
+                subscriptions: [],
                 favoriteTopics: Array.isArray(b.favoriteTopics) ? b.favoriteTopics : [...legacyFavoriteTopics]
               };
             }
           }
           return {
             ...b,
-            subscriptions: b.subscriptions || ['#'],
+            subscriptions: Array.isArray(b.subscriptions) ? b.subscriptions : [],
             favoriteTopics: Array.isArray(b.favoriteTopics) ? b.favoriteTopics : [...legacyFavoriteTopics]
           };
         });
@@ -111,7 +172,7 @@ export default function App() {
       port: 8083,
       path: '/mqtt',
       clientId: `${MQTTClientPrefix}${Math.random().toString(16).substr(2, 8)}`,
-      subscriptions: ['#'],
+      subscriptions: [],
       favoriteTopics: [...legacyFavoriteTopics]
     }];
   });
@@ -126,6 +187,11 @@ export default function App() {
     return saved ? JSON.parse(saved) : [];
   });
 
+  const [savedTopicTemplates, setSavedTopicTemplates] = useState<SavedTopicTemplate[]>(() => {
+    const saved = localStorage.getItem('mqtt_saved_topic_templates');
+    return saved ? JSON.parse(saved) : [];
+  });
+
   const [activeBrokerId, setActiveBrokerId] = useState<string | null>(null);
   
   const [isLeftSidebarOpen, setIsLeftSidebarOpen] = useState(true);
@@ -134,6 +200,7 @@ export default function App() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingBroker, setEditingBroker] = useState<BrokerConfig | null>(null);
   const [activeMainView, setActiveMainView] = useState<'messages' | 'publish'>('messages');
+  const [configFeedback, setConfigFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   
   const favoriteTopics = useMemo(
     () => brokers.find(broker => broker.id === activeBrokerId)?.favoriteTopics || [],
@@ -166,6 +233,10 @@ export default function App() {
     localStorage.setItem('mqtt_saved_credentials', JSON.stringify(savedCredentials));
   }, [savedCredentials]);
 
+  useEffect(() => {
+    localStorage.setItem('mqtt_saved_topic_templates', JSON.stringify(savedTopicTemplates));
+  }, [savedTopicTemplates]);
+
   const handleAddToFavorites = (topic: string, isWildcard: boolean = false) => {
     // Determine the actual topic path to add
     const topicToAdd = isWildcard ? `${topic}/#` : topic;
@@ -190,10 +261,10 @@ export default function App() {
       const activeBroker = brokers.find(b => b.id === activeBrokerId);
       if (activeBroker && activeBroker.subscriptions) {
         activeBroker.subscriptions.forEach(sub => {
-          subscribe(sub, 2);
+          void subscribe(sub, 2).catch(error => console.error('[MQTT] Saved subscription failed:', error));
         });
       } else {
-        subscribe('#', 2);
+        console.info('[MQTT] No default subscriptions configured for this broker');
       }
       // 连接成功后自动展开 Topic Tree
       setShouldAutoExpandTree(true);
@@ -203,8 +274,7 @@ export default function App() {
     }
   }, [status, activeBrokerId]);
 
-  const handleSubscribe = (topic: string, qos: 0 | 1 | 2) => {
-    subscribe(topic, qos);
+  const saveBrokerSubscription = (topic: string) => {
     if (activeBrokerId) {
       setBrokers(prev => prev.map(b => {
         if (b.id === activeBrokerId) {
@@ -216,6 +286,20 @@ export default function App() {
         return b;
       }));
     }
+  };
+
+  const handleSubscribe = (topic: string, qos: 0 | 1 | 2) => {
+    void subscribe(topic, qos)
+      .then(() => saveBrokerSubscription(topic))
+      .catch(error => console.error('[MQTT] Subscribe failed:', error));
+  };
+
+  const handlePublish = async (topic: string, message: string, qos: 0 | 1 | 2) => {
+    if (!subscriptions.some(filter => matchesTopicFilter(filter, topic))) {
+      await subscribe(topic, qos);
+      saveBrokerSubscription(topic);
+    }
+    await publish(topic, message, qos);
   };
 
   const handleUnsubscribe = (topic: string) => {
@@ -316,6 +400,51 @@ export default function App() {
     }));
   };
 
+  const handleExportConfig = () => {
+    const backup: AppConfigBackup = {
+      format: 'mqtt-nexus-config',
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      data: { brokers, savedHosts, savedCredentials, savedTopicTemplates, theme }
+    };
+    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `mqtt-nexus-config-${new Date().toISOString().slice(0, 10)}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+    setConfigFeedback({ type: 'success', message: 'Configuration exported. The file includes saved credentials.' });
+  };
+
+  const handleImportConfig = async (file: File) => {
+    try {
+      const parsed: unknown = JSON.parse(await file.text());
+      if (!isAppConfigBackup(parsed)) {
+        throw new Error('Unsupported or invalid MQTT Nexus configuration file.');
+      }
+      if (!window.confirm('Importing this file replaces all current MQTT Nexus configuration, including saved credentials. Continue?')) {
+        return;
+      }
+
+      if (status !== 'disconnected') disconnect();
+      setActiveBrokerId(null);
+      clearMessages();
+      setSelectedTopic(null);
+      setBrokers(parsed.data.brokers);
+      setSavedHosts(parsed.data.savedHosts);
+      setSavedCredentials(parsed.data.savedCredentials);
+      setSavedTopicTemplates(parsed.data.savedTopicTemplates);
+      setTheme(parsed.data.theme);
+      setConfigFeedback({ type: 'success', message: 'Configuration imported successfully.' });
+    } catch (error) {
+      setConfigFeedback({
+        type: 'error',
+        message: error instanceof Error ? error.message : 'Failed to import configuration.'
+      });
+    }
+  };
+
   return (
     <ThemeProvider theme={theme} setTheme={setTheme}>
       <div className={cn(
@@ -399,6 +528,9 @@ export default function App() {
                         onToggleCollapse={() => setIsLeftSidebarOpen(!isLeftSidebarOpen)}
                         onToggleTheme={handleThemeToggle}
                         themeMode={theme.mode}
+                        onExportConfig={handleExportConfig}
+                        onImportConfig={handleImportConfig}
+                        configFeedback={configFeedback}
                       />
                     </div>
                   </div>
@@ -481,7 +613,7 @@ export default function App() {
                     messages={messages}
                     selectedTopic={selectedTopic}
                     onClear={clearMessages}
-                    onPublish={publish}
+                    onPublish={handlePublish}
                   />
                 )}
               </div>
@@ -500,6 +632,9 @@ export default function App() {
         savedCredentials={savedCredentials}
         onSaveCredential={(cred) => setSavedCredentials(prev => [...prev, cred])}
         onDeleteCredential={(id) => setSavedCredentials(prev => prev.filter(c => c.id !== id))}
+        savedTopicTemplates={savedTopicTemplates}
+        onSaveTopicTemplate={(template) => setSavedTopicTemplates(prev => [...prev, template])}
+        onDeleteTopicTemplate={(id) => setSavedTopicTemplates(prev => prev.filter(template => template.id !== id))}
       />
     </div>
     </ThemeProvider>

@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Server, Plus, Trash2, Plug, Unplug, AlertCircle, Edit2, PanelLeftClose, PanelLeftOpen, Hash, X, Check, Palette } from 'lucide-react';
+import { Server, Plus, Trash2, Plug, Unplug, AlertCircle, Edit2, PanelLeftClose, PanelLeftOpen, Hash, X, Check, Palette, Download, Upload } from 'lucide-react';
 import { BrokerConfig } from '../types';
 import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
@@ -28,6 +28,9 @@ interface BrokerSidebarProps {
   onToggleCollapse?: () => void;
   onToggleTheme: () => void;
   themeMode: 'dark' | 'light';
+  onExportConfig: () => void;
+  onImportConfig: (file: File) => Promise<void>;
+  configFeedback: { type: 'success' | 'error'; message: string } | null;
 }
 
 export function BrokerSidebar({
@@ -48,6 +51,9 @@ export function BrokerSidebar({
   onToggleCollapse,
   onToggleTheme,
   themeMode,
+  onExportConfig,
+  onImportConfig,
+  configFeedback,
 }: BrokerSidebarProps) {
   const { theme, themeClasses } = useTheme();
   // favoriteTopics state is now managed by parent component via props
@@ -57,6 +63,13 @@ export function BrokerSidebar({
   const [showInlineInput, setShowInlineInput] = useState(false);
   const [inlineTopic, setInlineTopic] = useState('');
   const inlineInputRef = useRef<HTMLDivElement>(null);
+  const configFileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleConfigFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) await onImportConfig(file);
+    event.target.value = '';
+  };
 
   const handleToggleTopic = (topic: string, e?: React.MouseEvent | React.KeyboardEvent) => {
     e?.stopPropagation();
@@ -158,6 +171,23 @@ export function BrokerSidebar({
           Brokers
         </h2>
         <div className="flex items-center gap-1">
+          <button
+            onClick={onExportConfig}
+            className={cn("p-1.5 rounded-md transition-colors", themeClasses.textSecondary, "hover:text-cyan-400 hover:bg-cyan-500/10")}
+            title="Export configuration (includes saved credentials)"
+            aria-label="Export configuration"
+          >
+            <Download className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => configFileInputRef.current?.click()}
+            className={cn("p-1.5 rounded-md transition-colors", themeClasses.textSecondary, "hover:text-cyan-400 hover:bg-cyan-500/10")}
+            title="Import configuration from JSON"
+            aria-label="Import configuration"
+          >
+            <Upload className="w-4 h-4" />
+          </button>
+          <input ref={configFileInputRef} type="file" accept=".json,application/json" className="hidden" onChange={handleConfigFileChange} />
           {onToggleCollapse && (
             <button
               onClick={onToggleCollapse}
@@ -184,6 +214,18 @@ export function BrokerSidebar({
           </button>
         </div>
       </div>
+
+      {configFeedback && (
+        <div className={cn(
+          "shrink-0 px-3 py-2 text-xs border-b",
+          themeClasses.border,
+          configFeedback.type === 'success'
+            ? theme.mode === 'light' ? "bg-emerald-50 text-emerald-700" : "bg-emerald-500/10 text-emerald-300"
+            : theme.mode === 'light' ? "bg-rose-50 text-rose-700" : "bg-rose-500/10 text-rose-300"
+        )} role="status">
+          {configFeedback.message}
+        </div>
+      )}
 
       <div className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-2">
         <AnimatePresence initial={false}>

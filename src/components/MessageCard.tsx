@@ -152,9 +152,8 @@ export const MessageCard = React.memo(function MessageCard({ message, showDiffBy
     <motion.div 
       initial={{ opacity: 0, y: -10 }}
       animate={{ opacity: 1, y: 0 }}
-      layout
       className={cn(
-        "backdrop-blur-xl border rounded-xl p-3 transition-all duration-300 cursor-pointer group/message",
+        "backdrop-blur-xl border rounded-xl p-3 transition-all duration-300 group/message",
         themeClasses.cardBg,
         themeClasses.border,
         themeClasses.shadow,
@@ -357,7 +356,7 @@ export const MessageCard = React.memo(function MessageCard({ message, showDiffBy
                   <DiffViewer oldValue={message.previousPayload} newValue={message.payload} />
                 ) : (
                   <pre className={cn(
-                    "font-mono text-xs whitespace-pre-wrap overflow-x-auto p-4 rounded-md max-h-[400px] overflow-y-auto custom-scrollbar", 
+                    "font-mono text-xs whitespace-pre-wrap overflow-x-auto p-4 rounded-md max-h-[400px] overflow-y-auto custom-scrollbar select-text",
                     theme.mode === 'light' 
                       ? "bg-slate-100 text-slate-900 border border-slate-300 shadow-sm" 
                       : "bg-slate-900/80 text-slate-200 border border-slate-700/50 shadow-inner"

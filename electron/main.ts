@@ -186,12 +186,13 @@ ipcMain.handle('mqtt:unsubscribe', async (_event, topic: string) => {
 });
 
 ipcMain.handle('mqtt:publish', async (_event, topic: string, message: string, qos: 0 | 1 | 2 = 0) => {
-  if (!mqttClient) {
+  const client = mqttClient;
+  if (!client?.connected) {
     return { success: false, error: 'Not connected' };
   }
 
   return new Promise((resolve) => {
-    mqttClient!.publish(topic, message, { qos: qos as 0 | 1 | 2 }, (err) => {
+    client.publish(topic, message, { qos: qos as 0 | 1 | 2 }, (err) => {
       if (err) {
         console.error('[Main] MQTT Publish error:', err);
         resolve({ success: false, error: err.message });

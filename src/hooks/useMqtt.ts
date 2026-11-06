@@ -18,7 +18,7 @@ export interface MqttMessage {
   previousPayload?: string;
 }
 
-const MESSAGE_BATCH_INTERVAL_MS = 100;
+const MESSAGE_BATCH_INTERVAL_MS = 250;
 const MAX_STORED_MESSAGES = 5000;
 
 function limitStoredMessages(messages: MqttMessage[], perTopicLimit: number): MqttMessage[] {
@@ -347,32 +347,32 @@ export function useMqtt() {
     setMessageCounts({});
   }, [client, clearPendingMessages]);
 
-  const subscribe = useCallback((topic: string, qos: 0 | 1 | 2 = 0) => {
+  const subscribe = useCallback(async (topic: string, qos: 0 | 1 | 2 = 0) => {
     const inElectron = isElectron();
     
     if (inElectron) {
       // Electron 环境：通过 IPC 订阅
       if ((window as any).electronAPI?.mqtt && status === 'connected') {
-        (window as any).electronAPI.mqtt.subscribe(topic, qos);
+        const result = await (window as any).electronAPI.mqtt.subscribe(topic, qos);
+        if (!result?.success) {
+          throw new Error(result?.error || 'Failed to subscribe to topic');
+        }
         setSubscriptions((prev) => Array.from(new Set([...prev, topic])));
       } else {
-        console.error('[MQTT] Cannot subscribe: not connected or IPC not available');
+        throw new Error('Cannot subscribe: not connected or IPC not available');
       }
     } else {
       // 浏览器环境：直接订阅
-      if (client && status === 'connected') {
-        client.subscribe(topic, { qos }, (err) => {
-          if (!err) {
-            setSubscriptions((prev) => Array.from(new Set([...prev, topic])));
-          } else {
-            console.error('[MQTT] Subscribe error:', err);
-          }
+      if (client && status === 'connected' && client.connected) {
+        await new Promise<void>((resolve, reject) => {
+          client.subscribe(topic, { qos }, (error) => {
+            if (error) reject(error);
+            else resolve();
+          });
         });
+        setSubscriptions((prev) => Array.from(new Set([...prev, topic])));
       } else {
-        console.error('[MQTT] Cannot subscribe: client not connected', { 
-          hasClient: !!client, 
-          status 
-        });
+        throw new Error('Cannot subscribe: client is not connected');
       }
     }
   }, [client, status]);
@@ -423,7 +423,7 @@ export function useMqtt() {
       return;
     }
 
-    if (!client) {
+    if (!client || !client.connected) {
       throw new Error('MQTT client is not connected');
     }
 

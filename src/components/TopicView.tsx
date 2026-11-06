@@ -4,7 +4,7 @@ import { DiffViewer } from './DiffViewer';
 import { MessageCard } from './MessageCard';
 import { ChartPanel } from './ChartPanel';
 import { CodeGenModal } from './CodeGenModal';
-import { Activity, SplitSquareHorizontal, Play, Pause, Trash2, History, Filter, LayoutTemplate, Columns, FileJson, ArrowDownUp, Calendar, Maximize2, Minimize2, X, Code2, Clock, Hash, Copy, Check, Search, FileText } from 'lucide-react';
+import { Activity, SplitSquareHorizontal, Play, Pause, Trash2, History, Filter, LayoutTemplate, Columns, ArrowDown, ArrowUp, Calendar, Maximize2, Minimize2, X, Code2, Clock, Hash, Copy, Check, Search, FileText } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
 import { format } from 'date-fns';
@@ -72,6 +72,8 @@ export function TopicView({ topic, messages, onClear }: TopicViewProps) {
   const { theme, themeClasses } = useTheme();
   const [isPaused, setIsPaused] = useState(false);
   const [pausedMessages, setPausedMessages] = useState<MqttMessage[]>([]);
+  const [hoveredMessages, setHoveredMessages] = useState<MqttMessage[] | null>(null);
+  const [isHistoryHovered, setIsHistoryHovered] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [diffMode, setDiffMode] = useState<'inline' | 'latest' | 'split'>('inline');
   const [searchTime, setSearchTime] = useState('');
@@ -130,28 +132,29 @@ export function TopicView({ topic, messages, onClear }: TopicViewProps) {
   }, []);
 
   React.useEffect(() => {
-    if (isPaused || activeChartPaths.length === 0) return;
+    if (activeChartPaths.length === 0) return;
 
     setChartNow(Date.now());
     const timer = setInterval(() => setChartNow(Date.now()), 1000);
     return () => clearInterval(timer);
-  }, [isPaused, activeChartPaths.length]);
+  }, [activeChartPaths.length]);
 
   const handlePauseToggle = () => {
     if (isPaused) {
       setIsPaused(false);
       setPausedMessages([]);
+      setHoveredMessages(isHistoryHovered ? messages : null);
     } else {
       setIsPaused(true);
-      setPausedMessages(messages);
+      setPausedMessages(hoveredMessages ?? messages);
     }
   };
 
-  const displayMessages = isPaused ? pausedMessages : messages;
+  const historyMessages = isPaused ? pausedMessages : hoveredMessages ?? messages;
 
   const topicMessages = useMemo(() => {
     if (!topic) return [];
-    let filtered = displayMessages.filter(m => m.topic === topic);
+    let filtered = historyMessages.filter(m => m.topic === topic);
     
     if (searchTime) {
       filtered = filtered.filter(m => 
@@ -165,12 +168,23 @@ export function TopicView({ topic, messages, onClear }: TopicViewProps) {
     }
     
     return filtered;
-  }, [topic, displayMessages, searchTime, sortOrder]);
+  }, [topic, historyMessages, searchTime, sortOrder]);
+
+  const liveTopicMessages = useMemo(() => {
+    if (!topic) return [];
+    let filtered = messages.filter(message => message.topic === topic);
+    if (searchTime) {
+      filtered = filtered.filter(message =>
+        new Date(message.timestamp).toLocaleTimeString().toLowerCase().includes(searchTime.toLowerCase())
+      );
+    }
+    return sortOrder === 'asc' ? [...filtered].reverse() : filtered;
+  }, [topic, messages, searchTime, sortOrder]);
 
   const latestMessage = useMemo(() => {
     if (!topic) return null;
-    return displayMessages.find(m => m.topic === topic);
-  }, [topic, displayMessages]);
+    return messages.find(message => message.topic === topic);
+  }, [topic, messages]);
 
   const parsedLatestPayload = useMemo(() => {
     if (!latestMessage) return null;
@@ -228,7 +242,7 @@ export function TopicView({ topic, messages, onClear }: TopicViewProps) {
   const parsedChartMessages = useMemo(() => {
     if (activeChartPaths.length === 0) return [];
 
-    return [...topicMessages]
+    return [...liveTopicMessages]
       .sort((a, b) => a.timestamp - b.timestamp)
       .map(message => {
         try {
@@ -237,7 +251,7 @@ export function TopicView({ topic, messages, onClear }: TopicViewProps) {
           return { message, payload: null };
         }
       });
-  }, [topicMessages, activeChartPaths.length]);
+  }, [liveTopicMessages, activeChartPaths.length]);
 
   const getChartData = (path: string) => {
     return parsedChartMessages.map(({ message, payload }) => {
@@ -370,24 +384,6 @@ export function TopicView({ topic, messages, onClear }: TopicViewProps) {
             >
               <History className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">History</span>
-            </button>
-
-            <button
-              onClick={handlePauseToggle}
-              className={cn(
-                "flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-colors border",
-                isPaused 
-                  ? "bg-amber-500/20 text-amber-400 border-amber-500/30 hover:bg-amber-500/30" 
-                  : theme.overlay === 'transparent'
-                    ? theme.mode === 'light'
-                      ? "bg-white/50 text-slate-700 border-slate-300 hover:bg-slate-200/50"
-                      : "bg-slate-800/50 text-slate-300 border border-slate-700 hover:bg-slate-700"
-                    : theme.mode === 'light' ? "bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-200" : "bg-slate-800/50 text-slate-300 border border-slate-700 hover:bg-slate-700"
-              )}
-              title={isPaused ? "Resume feed" : "Pause feed"}
-            >
-              {isPaused ? <Play className="w-3.5 h-3.5" /> : <Pause className="w-3.5 h-3.5" />}
-              <span className="hidden sm:inline">{isPaused ? 'Resume' : 'Pause'}</span>
             </button>
 
             <button
@@ -607,7 +603,7 @@ export function TopicView({ topic, messages, onClear }: TopicViewProps) {
                                 .map(field => (
                                   <button
                                     key={field}
-                                    onClick={() => setSelectedFields(prev => prev.includes(field) ? prev.filter(f => f !== field) : [...prev, field])}
+                                    onClick={() => setSelectedFields(prev => prev.includes(field) ? prev.filter(item => item !== field) : [...prev, field])}
                                     className={cn(
                                       "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-mono transition-all border",
                                       selectedFields.includes(field)
@@ -616,8 +612,8 @@ export function TopicView({ topic, messages, onClear }: TopicViewProps) {
                                           ? theme.mode === 'light'
                                             ? "bg-white/50 text-slate-700 border-slate-300 hover:border-slate-400 hover:bg-slate-200/50"
                                             : "bg-slate-800/50 text-slate-400 border-slate-700 hover:border-slate-600 hover:bg-slate-700"
-                                          : theme.mode === 'light' 
-                                            ? "bg-slate-100 text-slate-700 border-slate-300 hover:border-slate-400 hover:bg-slate-200" 
+                                          : theme.mode === 'light'
+                                            ? "bg-slate-100 text-slate-700 border-slate-300 hover:border-slate-400 hover:bg-slate-200"
                                             : "bg-slate-800 text-slate-400 border-slate-700 hover:border-slate-600 hover:bg-slate-700"
                                     )}
                                   >
@@ -740,13 +736,27 @@ export function TopicView({ topic, messages, onClear }: TopicViewProps) {
                     <History className="w-4 h-4" />
                     History
                   </h3>
-                  <button
-                    onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
-                    className={cn("p-1.5 rounded-md text-slate-400 hover:text-cyan-400 transition-colors", theme.overlay === 'transparent' ? "hover:bg-slate-800/50" : "hover:bg-slate-800")}
-                    title={`Sort ${sortOrder === 'asc' ? 'Descending' : 'Ascending'}`}
-                  >
-                    <ArrowDownUp className="w-4 h-4" />
-                  </button>
+                  <div className="flex items-center gap-1">
+                    {isPaused && <span className="text-[10px] font-medium text-amber-400">Paused</span>}
+                    <button
+                      onClick={handlePauseToggle}
+                      className={cn("rounded-md p-1.5 transition-colors", isPaused ? "bg-amber-500/15 text-amber-400" : "text-slate-400 hover:bg-slate-800 hover:text-cyan-400")}
+                      title={isPaused ? "Resume history updates" : "Pause history updates"}
+                      aria-label={isPaused ? "Resume history updates" : "Pause history updates"}
+                    >
+                      {isPaused ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
+                    </button>
+                    <button
+                      onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
+                      className={cn("p-1.5 rounded-md text-slate-400 hover:text-cyan-400 transition-colors", theme.overlay === 'transparent' ? "hover:bg-slate-800/50" : "hover:bg-slate-800")}
+                      title={`Sort ${sortOrder === 'asc' ? 'Descending' : 'Ascending'}`}
+                      aria-label={`Sort ${sortOrder === 'asc' ? 'Descending' : 'Ascending'}`}
+                    >
+                      {sortOrder === 'asc'
+                        ? <ArrowUp className="w-4 h-4 text-cyan-400" />
+                        : <ArrowDown className="w-4 h-4 text-cyan-400" />}
+                    </button>
+                  </div>
                 </div>
                 <div className="flex flex-col gap-2">
                   <div className="relative">
@@ -770,7 +780,17 @@ export function TopicView({ topic, messages, onClear }: TopicViewProps) {
                   </div>
                 </div>
               </div>
-              <div className="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-2">
+              <div
+                className="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-2"
+                onMouseEnter={() => {
+                  setIsHistoryHovered(true);
+                  if (!isPaused) setHoveredMessages(messages);
+                }}
+                onMouseLeave={() => {
+                  setIsHistoryHovered(false);
+                  setHoveredMessages(null);
+                }}
+              >
                 <AnimatePresence initial={false}>
                   {topicMessages.map(msg => (
                     <MessageCard key={msg.id} message={msg} showDiffByDefault={false} />

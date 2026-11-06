@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Server, User, Key, Globe, Link2, Library, BookmarkPlus } from 'lucide-react';
-import { BrokerConfig, SavedHost, SavedCredential } from '../types';
+import { BrokerConfig, SavedHost, SavedCredential, SavedTopicTemplate } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
 import { useTheme } from '../contexts/ThemeContext';
@@ -17,6 +17,9 @@ interface BrokerModalProps {
   savedCredentials: SavedCredential[];
   onSaveCredential: (cred: SavedCredential) => void;
   onDeleteCredential: (id: string) => void;
+  savedTopicTemplates: SavedTopicTemplate[];
+  onSaveTopicTemplate: (template: SavedTopicTemplate) => void;
+  onDeleteTopicTemplate: (id: string) => void;
 }
 
 export function BrokerModal({ 
@@ -29,7 +32,10 @@ export function BrokerModal({
   onDeleteHost,
   savedCredentials,
   onSaveCredential,
-  onDeleteCredential
+  onDeleteCredential,
+  savedTopicTemplates,
+  onSaveTopicTemplate,
+  onDeleteTopicTemplate
 }: BrokerModalProps) {
   const { theme, themeClasses } = useTheme();
 
@@ -41,6 +47,9 @@ export function BrokerModal({
   const [clientId, setClientId] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [subscriptionsText, setSubscriptionsText] = useState('');
+  const [showTopicTemplateLib, setShowTopicTemplateLib] = useState(false);
+  const [topicTemplateAlias, setTopicTemplateAlias] = useState('');
 
   // Library UI states
   const [showHostLib, setShowHostLib] = useState(false);
@@ -146,6 +155,18 @@ export function BrokerModal({
     }
   };
 
+  const saveTopicTemplate = () => {
+    const topics = Array.from(new Set(subscriptionsText.split(/[\n,]+/).map(topic => topic.trim()).filter(Boolean)));
+    const alias = topicTemplateAlias.trim();
+    if (!alias || topics.length === 0) return;
+    if (savedTopicTemplates.some(template => template.alias.toLowerCase() === alias.toLowerCase())) {
+      setErrorMessage(`Topic template "${alias}" already exists. Please use a different name.`);
+      return;
+    }
+    onSaveTopicTemplate({ id: Math.random().toString(36).substr(2, 9), alias, topics });
+    setTopicTemplateAlias('');
+  };
+
 
   useEffect(() => {
     if (isOpen) {
@@ -158,6 +179,7 @@ export function BrokerModal({
         setClientId(initialData.clientId);
         setUsername(initialData.username || '');
         setPassword(initialData.password || '');
+        setSubscriptionsText((initialData.subscriptions || []).join('\n'));
       } else {
         setName('');
         setProtocol('mqtt');
@@ -166,8 +188,10 @@ export function BrokerModal({
         setClientId(`${MQTTClientPrefix}${Math.random().toString(16).substr(2, 8)}`);
         setUsername('');
         setPassword('');
+        setSubscriptionsText('');
       }
       setShowHostLib(false);
+      setShowTopicTemplateLib(false);
       setSavingHost(false);
       setShowCredLib(false);
       setSavingCred(false);
@@ -223,6 +247,7 @@ export function BrokerModal({
         clientId: clientId.trim() || `${MQTTClientPrefix}${Math.random().toString(16).substr(2, 8)}`,
         username: username.trim() || undefined,
         password: password || undefined,
+        subscriptions: Array.from(new Set(subscriptionsText.split(/[\n,]+/).map(topic => topic.trim()).filter(Boolean))),
       };
       
       if (initialData) {
@@ -297,7 +322,7 @@ export function BrokerModal({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             className={cn(
-              "fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden",
+              "fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-[calc(100%-2rem)] max-w-2xl rounded-2xl shadow-2xl overflow-hidden",
               themeClasses.cardBg,
               themeClasses.border,
               themeClasses.shadow
@@ -324,7 +349,7 @@ export function BrokerModal({
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
+            <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[90vh] overflow-y-auto custom-scrollbar">
               <div className="space-y-1">
                 <label className={cn("text-xs font-medium uppercase tracking-wider", themeClasses.textSecondary)}>Connection Name</label>
                 <input
@@ -537,6 +562,76 @@ export function BrokerModal({
                     )}
                   />
                 </div>
+              </div>
+
+              <div className="space-y-1">
+                <div className="flex items-center justify-between gap-3">
+                  <label className={cn("text-xs font-medium uppercase tracking-wider", theme.mode === 'light' ? "text-slate-600" : "text-slate-400")}>Default Topic Subscriptions</label>
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setShowTopicTemplateLib(prev => !prev)}
+                      className={cn("inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs transition-colors", theme.mode === 'light' ? "text-cyan-700 hover:bg-cyan-50" : "text-cyan-300 hover:bg-slate-800")}
+                      aria-expanded={showTopicTemplateLib}
+                    >
+                      <Library className="h-3.5 w-3.5" />
+                      Templates ({savedTopicTemplates.length})
+                    </button>
+                    {showTopicTemplateLib && (
+                      <div className={cn("absolute right-0 top-full z-[9999] mt-1 w-80 overflow-hidden rounded-lg border shadow-xl", theme.mode === 'light' ? "border-slate-200 bg-white text-slate-800" : "border-slate-700 bg-slate-900 text-slate-200")}>
+                        <div className="max-h-48 overflow-y-auto">
+                          {savedTopicTemplates.length === 0 ? (
+                            <p className={cn("px-3 py-4 text-center text-xs", themeClasses.textSecondary)}>No saved topic templates</p>
+                          ) : savedTopicTemplates.map(template => (
+                            <div key={template.id} className={cn("flex items-center gap-2 border-b px-3 py-2 last:border-b-0", theme.mode === 'light' ? "border-slate-100 hover:bg-slate-50" : "border-slate-800 hover:bg-slate-800")}>
+                              <button
+                                type="button"
+                                onClick={() => { setSubscriptionsText(template.topics.join('\n')); setShowTopicTemplateLib(false); }}
+                                className="min-w-0 flex-1 text-left"
+                                title={template.topics.join('\n')}
+                              >
+                                <span className="block truncate text-xs font-medium">{template.alias}</span>
+                                <span className={cn("block truncate font-mono text-[10px]", themeClasses.textSecondary)}>{template.topics.join(', ')}</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => onDeleteTopicTemplate(template.id)}
+                                className={cn("rounded p-1", theme.mode === 'light' ? "text-slate-400 hover:bg-rose-50 hover:text-rose-600" : "text-slate-500 hover:bg-rose-950/40 hover:text-rose-400")}
+                                title={`Delete ${template.alias}`}
+                                aria-label={`Delete ${template.alias}`}
+                              >
+                                <X className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                        <div className={cn("flex items-center gap-2 border-t p-2", theme.mode === 'light' ? "border-slate-200 bg-slate-50" : "border-slate-700 bg-slate-800")}>
+                          <BookmarkPlus className={cn("h-4 w-4 shrink-0", themeClasses.textSecondary)} />
+                          <input
+                            type="text"
+                            value={topicTemplateAlias}
+                            onChange={event => setTopicTemplateAlias(event.target.value)}
+                            onKeyDown={event => { if (event.key === 'Enter') { event.preventDefault(); saveTopicTemplate(); } }}
+                            placeholder="Template name"
+                            className={cn("min-w-0 flex-1 rounded border px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-cyan-500", theme.mode === 'light' ? "border-slate-300 bg-white text-slate-800" : "border-slate-700 bg-slate-900 text-slate-200")}
+                          />
+                          <button type="button" onClick={saveTopicTemplate} disabled={!topicTemplateAlias.trim() || !subscriptionsText.trim()} className="rounded bg-cyan-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-cyan-700 disabled:cursor-not-allowed disabled:opacity-50">Save</button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <textarea
+                  value={subscriptionsText}
+                  onChange={(event) => setSubscriptionsText(event.target.value)}
+                  className={cn(
+                    "block w-full min-h-20 px-3 py-2 border rounded-lg text-sm font-mono leading-5 focus:outline-none focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 transition-colors",
+                    theme.mode === 'light' ? "bg-slate-100 text-slate-800 placeholder-slate-500 border-slate-300" : "bg-slate-950/50 text-slate-300 placeholder-slate-500 border-slate-700"
+                  )}
+                  placeholder={'#\nfactory/+/status'}
+                  aria-label="Default topic subscriptions"
+                />
+                <p className={cn("text-xs", themeClasses.textSecondary)}>Enter one topic filter per line. These filters are restored when connecting.</p>
               </div>
 
               <div className="space-y-3 pt-2 border-t" style={{ borderColor: theme.mode === 'light' ? '#e2e8f0' : '#1e293b' }}>

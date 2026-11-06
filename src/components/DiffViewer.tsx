@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { diffJson, diffLines, Change } from 'diff';
 import { cn } from '../lib/utils';
-import { Copy, LineChart as LineChartIcon } from 'lucide-react';
+import { Copy, FileJson, KeyRound, LineChart as LineChartIcon } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 
 interface DiffViewerProps {
@@ -60,6 +60,47 @@ export function getLinePaths(jsonString: string): string[] {
 
 export function DiffViewer({ oldValue, newValue, className, viewMode = 'inline', onChartClick, activeChartPaths = [], noScroll = false }: DiffViewerProps) {
   const { theme } = useTheme();
+  const copyField = (path: string, mode: 'pair' | 'key' | 'value', source: string) => {
+    let payload: any;
+    try {
+      payload = JSON.parse(source);
+    } catch {
+      return;
+    }
+
+    const value = path.split('.').reduce((current, part) => current?.[part], payload);
+    const key = path.split('.').pop() || path;
+    const text = mode === 'key'
+      ? key
+      : mode === 'value'
+        ? typeof value === 'string' ? value : JSON.stringify(value, null, 2) ?? String(value)
+        : JSON.stringify({ [key]: value }, null, 2);
+    void navigator.clipboard.writeText(text);
+  };
+  const renderFieldActions = (path: string, source: string) => path ? (
+    <span className="mr-2 inline-flex shrink-0 items-center gap-1">
+      {onChartClick && (
+        <button
+          type="button"
+          onClick={() => onChartClick(path)}
+          className="rounded p-0.5 text-cyan-500 transition-colors hover:bg-cyan-500/10"
+          title={`Monitor ${path}`}
+          aria-label={`Monitor ${path}`}
+        >
+          <LineChartIcon className="h-3.5 w-3.5" />
+        </button>
+      )}
+      <button type="button" onClick={() => copyField(path, 'pair', source)} className="rounded p-0.5 text-emerald-500 transition-colors hover:bg-emerald-500/10" title={`Copy key and value: ${path}`} aria-label={`Copy key and value: ${path}`}>
+        <Copy className="h-3.5 w-3.5" />
+      </button>
+      <button type="button" onClick={() => copyField(path, 'key', source)} className="rounded p-0.5 text-amber-500 transition-colors hover:bg-amber-500/10" title={`Copy key: ${path}`} aria-label={`Copy key: ${path}`}>
+        <KeyRound className="h-3.5 w-3.5" />
+      </button>
+      <button type="button" onClick={() => copyField(path, 'value', source)} className="rounded p-0.5 text-sky-500 transition-colors hover:bg-sky-500/10" title={`Copy value: ${path}`} aria-label={`Copy value: ${path}`}>
+        <FileJson className="h-3.5 w-3.5" />
+      </button>
+    </span>
+  ) : <span className="mr-2 w-[4.75rem] shrink-0" />;
   const diffs = useMemo(() => {
     try {
       // Try parsing as JSON first
@@ -123,19 +164,7 @@ export function DiffViewer({ oldValue, newValue, className, viewMode = 'inline',
             const isActive = activeChartPaths.includes(path);
             return (
               <div key={i} className={cn("px-2 py-0.5 whitespace-pre flex items-center transition-colors", theme.mode === 'light' ? "hover:bg-slate-200/50" : "hover:bg-slate-800/50", isActive && "bg-cyan-900/30")}>
-                {path && onChartClick && (
-                  <button 
-                    onClick={() => onChartClick(path)}
-                    className={cn(
-                      "mr-2 transition-colors",
-                      isActive ? "text-cyan-400" : "text-slate-500 hover:text-cyan-400"
-                    )}
-                    title={`Monitor ${path}`}
-                  >
-                    <LineChartIcon className="w-3.5 h-3.5" />
-                  </button>
-                )}
-                {!path && onChartClick && <div className="w-3.5 h-3.5 mr-2 shrink-0" />}
+                {renderFieldActions(path, newValue)}
                 <span className={cn(theme.mode === 'light' ? "text-slate-700" : "text-slate-300")} dangerouslySetInnerHTML={{ __html: syntaxHighlight(line, theme.mode === 'light') }} />
               </div>
             );
@@ -216,19 +245,7 @@ export function DiffViewer({ oldValue, newValue, className, viewMode = 'inline',
                       part.removed ? "bg-rose-500/20 text-rose-300" : theme.mode === 'light' ? "text-slate-700" : "text-slate-300",
                       isActive && !part.removed && "bg-cyan-900/30"
                     )}>
-                      {path && onChartClick && (
-                        <button 
-                          onClick={() => onChartClick(path)}
-                          className={cn(
-                            "mr-2 transition-colors",
-                            isActive ? "text-cyan-400" : "text-slate-500 hover:text-cyan-400"
-                          )}
-                          title={`Monitor ${path}`}
-                        >
-                          <LineChartIcon className="w-3.5 h-3.5" />
-                        </button>
-                      )}
-                      {!path && onChartClick && <div className="w-3.5 h-3.5 mr-2 shrink-0" />}
+                      {renderFieldActions(path, oldValue)}
                       <span dangerouslySetInnerHTML={{ __html: syntaxHighlight(line, theme.mode === 'light') }} />
                     </div>
                   );
@@ -257,19 +274,7 @@ export function DiffViewer({ oldValue, newValue, className, viewMode = 'inline',
                       part.added ? "bg-emerald-500/20 text-emerald-300" : theme.mode === 'light' ? "text-slate-700" : "text-slate-300",
                       isActive && !part.added && "bg-cyan-900/30"
                     )}>
-                      {path && onChartClick && (
-                        <button 
-                          onClick={() => onChartClick(path)}
-                          className={cn(
-                            "mr-2 transition-colors",
-                            isActive ? "text-cyan-400" : "text-slate-500 hover:text-cyan-400"
-                          )}
-                          title={`Monitor ${path}`}
-                        >
-                          <LineChartIcon className="w-3.5 h-3.5" />
-                        </button>
-                      )}
-                      {!path && onChartClick && <div className="w-3.5 h-3.5 mr-2 shrink-0" />}
+                      {renderFieldActions(path, newValue)}
                       <span dangerouslySetInnerHTML={{ __html: syntaxHighlight(line, theme.mode === 'light') }} />
                     </div>
                   );
@@ -330,19 +335,7 @@ export function DiffViewer({ oldValue, newValue, className, viewMode = 'inline',
                     rows.push(
                       <div key={`removed-${i}-${j}`} className={cn("flex px-2 py-0.5 bg-rose-500/20 transition-colors items-center", isActive && "bg-rose-500/30")}>
                         <div className="w-6 shrink-0 select-none text-right pr-2 mr-2 border-r border-slate-700/50 text-rose-500">-</div>
-                        {path && onChartClick && (
-                          <button 
-                            onClick={() => onChartClick(path)}
-                            className={cn(
-                              "mr-2 transition-colors",
-                              isActive ? "text-cyan-400" : "text-slate-500 hover:text-cyan-400"
-                            )}
-                            title={`Monitor ${path}`}
-                          >
-                            <LineChartIcon className="w-3.5 h-3.5" />
-                          </button>
-                        )}
-                        {!path && onChartClick && <div className="w-3.5 h-3.5 mr-2 shrink-0" />}
+                        {renderFieldActions(path, oldValue)}
                         <div className={cn("whitespace-pre flex-1", theme.mode === 'light' ? "text-slate-700" : "text-slate-300")} dangerouslySetInnerHTML={{ __html: syntaxHighlight(removedLines[j], theme.mode === 'light') }} />
                       </div>
                     );
@@ -353,19 +346,7 @@ export function DiffViewer({ oldValue, newValue, className, viewMode = 'inline',
                     rows.push(
                       <div key={`added-${i}-${j}`} className={cn("flex px-2 py-0.5 bg-emerald-500/20 transition-colors items-center", isActive && "bg-emerald-500/30")}>
                         <div className="w-6 shrink-0 select-none text-right pr-2 mr-2 border-r border-slate-700/50 text-emerald-500">+</div>
-                        {path && onChartClick && (
-                          <button 
-                            onClick={() => onChartClick(path)}
-                            className={cn(
-                              "mr-2 transition-colors",
-                              isActive ? "text-cyan-400" : "text-slate-500 hover:text-cyan-400"
-                            )}
-                            title={`Monitor ${path}`}
-                          >
-                            <LineChartIcon className="w-3.5 h-3.5" />
-                          </button>
-                        )}
-                        {!path && onChartClick && <div className="w-3.5 h-3.5 mr-2 shrink-0" />}
+                        {renderFieldActions(path, newValue)}
                         <div className={cn("whitespace-pre flex-1", theme.mode === 'light' ? "text-slate-700" : "text-slate-300")} dangerouslySetInnerHTML={{ __html: syntaxHighlight(addedLines[j], theme.mode === 'light') }} />
                       </div>
                     );
@@ -401,19 +382,7 @@ export function DiffViewer({ oldValue, newValue, className, viewMode = 'inline',
                       )}>
                         {isAdded ? '+' : isRemoved ? '-' : ' '}
                       </div>
-                      {path && onChartClick && (
-                        <button 
-                          onClick={() => onChartClick(path)}
-                          className={cn(
-                            "mr-2 transition-colors",
-                            isActive ? "text-cyan-400" : "text-slate-500 hover:text-cyan-400"
-                          )}
-                          title={`Monitor ${path}`}
-                        >
-                          <LineChartIcon className="w-3.5 h-3.5" />
-                        </button>
-                      )}
-                      {!path && onChartClick && <div className="w-3.5 h-3.5 mr-2 shrink-0" />}
+                      {renderFieldActions(path, isRemoved ? oldValue : newValue)}
                       <div className={cn("whitespace-pre flex-1", theme.mode === 'light' ? "text-slate-700" : "text-slate-300")} dangerouslySetInnerHTML={{ __html: syntaxHighlight(line, theme.mode === 'light') }} />
                     </div>
                   );

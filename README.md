@@ -26,16 +26,6 @@
 
 > **Note**: Browser environment only supports `ws://` and `wss://`. For full MQTT protocol support, use the Electron desktop app.
 
-### 🎯 Core Features
-
-- 📊 **Real-time Message Monitoring** - Subscribe and publish to topics with live updates
-- 🔍 **Message Diff Viewer** - Compare message payloads side-by-side
-- 🤖 **AI Integration** - Gemini API for intelligent message analysis
-- 💾 **Connection Management** - Save and manage multiple broker configurations
-- 🎨 **Modern UI** - Beautiful dark theme with Tailwind CSS
-- 📱 **Responsive Design** - Works on all screen sizes
-
----
 
 ## 🚀 Quick Start
 

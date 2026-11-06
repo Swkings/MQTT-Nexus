@@ -27,3 +27,9 @@ export interface SavedCredential {
   username?: string;
   password?: string;
 }
+
+export interface SavedTopicTemplate {
+  id: string;
+  alias: string;
+  topics: string[];
+}
