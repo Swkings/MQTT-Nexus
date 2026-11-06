@@ -1,8 +1,46 @@
-import { app, BrowserWindow, ipcMain, Menu } from 'electron';
+import { app, BrowserWindow, ipcMain, Menu, type WebContents } from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import mqtt, { MqttClient, IClientOptions } from 'mqtt';
 import fs from 'fs';
+import { inspect } from 'node:util';
+
+const originalConsoleError = console.error.bind(console);
+
+function appendMainLog(level: string, values: unknown[]) {
+  const message = values.map((value) => {
+    if (value instanceof Error) {
+      return value.stack ?? `${value.name}: ${value.message}`;
+    }
+    return typeof value === 'string' ? value : inspect(value, { depth: 5 });
+  }).join(' ');
+
+  try {
+    const logDirectory = path.join(app.getPath('userData'), 'logs');
+    fs.mkdirSync(logDirectory, { recursive: true });
+    fs.appendFileSync(
+      path.join(logDirectory, 'main.log'),
+      `${new Date().toISOString()} [${level}] ${message}\n`,
+      'utf8',
+    );
+  } catch (error) {
+    originalConsoleError('[Main] Unable to write log file:', error);
+  }
+}
+
+console.error = (...args: Parameters<typeof console.error>) => {
+  originalConsoleError(...args);
+  appendMainLog('ERROR', args);
+};
+
+process.on('uncaughtException', (error, origin) => {
+  appendMainLog('FATAL', [origin, error]);
+  app.quit();
+});
+
+process.on('unhandledRejection', (reason) => {
+  appendMainLog('ERROR', ['Unhandled promise rejection:', reason]);
+});
 
 if (process.platform === 'linux') {
   app.commandLine.appendSwitch('no-sandbox');
@@ -18,6 +56,18 @@ const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
 
 // MQTT 客户端实例
 let mqttClient: MqttClient | null = null;
+
+function sendToRenderer(sender: WebContents, channel: string, ...args: unknown[]) {
+  if (!sender.isDestroyed()) {
+    sender.send(channel, ...args);
+  }
+}
+
+function stopMqttClient() {
+  const client = mqttClient;
+  mqttClient = null;
+  client?.end(true);
+}
 
 async function createWindow() {
   const preloadPath = path.join(__dirname, 'preload.js');
@@ -88,11 +138,16 @@ async function createWindow() {
       console.log('[Main] Page loaded, preload should be executed');
     });
     
-    // 监听渲染进程的 console 输出
-    win.webContents.on('console-message', (_event, _level, message, _line, _sourceId) => {
-      console.log('[Renderer]', message);
-    });
   }
+
+  win.webContents.on('console-message', (_event, level, message, line, sourceId) => {
+    if (isDev) {
+      console.log('[Renderer]', message);
+    }
+    if (level === 3) {
+      appendMainLog('ERROR', [`[Renderer] ${message}`, `${sourceId}:${line}`]);
+    }
+  });
 
   // 添加 F12 快捷键开关开发者工具
   win.webContents.on('before-input-event', (event, input) => {
@@ -128,20 +183,20 @@ ipcMain.handle('mqtt:connect', async (event, url: string, options: IClientOption
     });
 
     mqttClient.on('connect', () => {
-      event.sender.send('mqtt:connected');
+      sendToRenderer(event.sender, 'mqtt:connected');
     });
 
     mqttClient.on('error', (err) => {
       console.error('[Main] MQTT Error:', err);
-      event.sender.send('mqtt:error', err.message);
+      sendToRenderer(event.sender, 'mqtt:error', err.message);
     });
 
     mqttClient.on('close', () => {
-      event.sender.send('mqtt:disconnect');
+      sendToRenderer(event.sender, 'mqtt:disconnect');
     });
 
     mqttClient.on('message', (topic, message, packet) => {
-      event.sender.send('mqtt:message', topic, message.toString(), packet.qos);
+      sendToRenderer(event.sender, 'mqtt:message', topic, message.toString(), packet.qos);
     });
 
     return { success: true };
@@ -221,11 +276,11 @@ app.whenReady().then(() => {
   });
 });
 
+app.on('before-quit', stopMqttClient);
+
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
-    if (mqttClient) {
-      mqttClient.end();
-    }
+    stopMqttClient();
     app.quit();
   }
 });
