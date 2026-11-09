@@ -4,7 +4,9 @@ import { fileURLToPath } from 'url';
 import mqtt, { MqttClient, IClientOptions } from 'mqtt';
 import fs from 'fs';
 import { inspect } from 'node:util';
-import { autoUpdater } from 'electron-updater';
+import electronUpdater from 'electron-updater';
+
+const { autoUpdater } = electronUpdater;
 
 const originalConsoleError = console.error.bind(console);
 
