@@ -1,8 +1,8 @@
 {
   "name": "mqtt-nexus",
   "private": true,
-  "version": "1.1.4",
-  "description": "MQTT Nexus - AI-Powered MQTT Desktop Client",
+  "version": "1.1.8",
+  "description": "MQTT Nexus - MQTT Desktop Client",
   "author": {
     "name": "MQTT Nexus Team",
     "email": "support@mqtt-nexus.dev"
@@ -16,11 +16,12 @@
     "clean": "rm -rf dist dist-electron release",
     "lint": "tsc --noEmit",
     "icons": "node scripts/generate-icons-from-css.js && node scripts/generate-icns-simple.js",
-    "electron:dev": "node scripts/start-dev.js",
-    "electron:build": "npm run build && tsc -p electron/tsconfig.json && electron-builder",
+    "electron:dev": "tsc -p electron/tsconfig.json && node scripts/start-dev.js",
+    "electron:build": "npm run build && tsc -p electron/tsconfig.json && electron-builder --publish never",
     "electron:build:win": "npm run electron:build -- -w",
     "electron:build:mac": "npm run electron:build -- -m",
-    "electron:build:linux": "npm run electron:build -- -l"
+    "electron:build:linux": "npm run electron:build -- -l --config.productName=MQTT-Nexus --config.linux.desktop.Name='MQTT Nexus'",
+    "release:upload": "node scripts/publish-release.js"
   },
   "dependencies": {
     "@google/genai": "^1.29.0",
@@ -31,6 +32,7 @@
     "date-fns": "^4.1.0",
     "diff": "^8.0.3",
     "dotenv": "^17.2.3",
+    "electron-updater": "^6.8.11",
     "express": "^4.21.2",
     "lucide-react": "^0.546.0",
     "motion": "^12.23.24",

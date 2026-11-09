@@ -27,10 +27,20 @@
     "category": "Development",
     "icon": "icons/icon.png"
   },
+  "deb": {
+    "afterInstall": "scripts/linux-after-install.tpl"
+  },
+  "rpm": {
+    "afterInstall": "scripts/linux-after-install.tpl"
+  },
   "nsis": {
     "oneClick": false,
     "allowToChangeInstallationDirectory": true,
     "createDesktopShortcut": true
   },
-  "publish": null
+  "publish": {
+    "provider": "github",
+    "owner": "Swkings",
+    "repo": "MQTT-Nexus"
+  }
 }

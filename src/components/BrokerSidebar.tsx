@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Server, Plus, Trash2, Plug, Unplug, AlertCircle, Edit2, PanelLeftClose, PanelLeftOpen, Hash, X, Check, Palette, Download, Upload, Library } from 'lucide-react';
+import { Server, Plus, Trash2, Plug, Unplug, AlertCircle, Edit2, PanelLeftClose, PanelLeftOpen, Hash, X, Check, Palette, Download, Upload, Library, RefreshCw } from 'lucide-react';
 import { BrokerConfig } from '../types';
 import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
@@ -30,6 +30,8 @@ interface BrokerSidebarProps {
   onOpenLibrary: () => void;
   onExportConfig: () => void;
   onImportConfig: (file: File) => Promise<void>;
+  onCheckForUpdates: () => void;
+  isCheckingForUpdates: boolean;
   configFeedback: { type: 'success' | 'error'; message: string } | null;
 }
 
@@ -53,6 +55,8 @@ export function BrokerSidebar({
   onOpenLibrary,
   onExportConfig,
   onImportConfig,
+  onCheckForUpdates,
+  isCheckingForUpdates,
   configFeedback,
 }: BrokerSidebarProps) {
   const { theme, themeClasses } = useTheme();
@@ -573,6 +577,18 @@ export function BrokerSidebar({
           >
             <Library className="w-4 h-4" />
           </button>
+          {window.electronAPI?.updates && (
+            <button
+              type="button"
+              onClick={onCheckForUpdates}
+              disabled={isCheckingForUpdates}
+              className={cn("p-2 rounded-md transition-colors disabled:opacity-50", themeClasses.textSecondary, "hover:text-cyan-400 hover:bg-cyan-500/10")}
+              title="Check for updates"
+              aria-label="Check for updates"
+            >
+              <RefreshCw className={cn("w-4 h-4", isCheckingForUpdates && "animate-spin")} />
+            </button>
+          )}
           <input ref={configFileInputRef} type="file" accept=".json,application/json" className="hidden" onChange={handleConfigFileChange} />
         </div>
         <button

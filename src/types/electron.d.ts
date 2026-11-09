@@ -5,6 +5,13 @@ export interface ElectronAPI {
     chrome: string;
     electron: string;
   };
+  updates: {
+    check: () => Promise<{
+      status: 'available' | 'current' | 'manual' | 'unavailable' | 'error';
+      version?: string;
+      message?: string;
+    }>;
+  };
   mqtt: {
     connect: (url: string, options: any) => Promise<any>;
     subscribe: (topic: string, qos?: number) => Promise<any>;
