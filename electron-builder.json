@@ -27,6 +27,12 @@
     "category": "Development",
     "icon": "icons/icon.png"
   },
+  "deb": {
+    "afterInstall": "scripts/linux-after-install.tpl"
+  },
+  "rpm": {
+    "afterInstall": "scripts/linux-after-install.tpl"
+  },
   "nsis": {
     "oneClick": false,
     "allowToChangeInstallationDirectory": true,
