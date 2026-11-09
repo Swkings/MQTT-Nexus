@@ -153,6 +153,14 @@ npm run electron:build:linux
 
 Build artifacts will be in the `release/` directory.
 
+### Releases and Updates
+
+Build each platform package locally with the commands above. Local builds do not publish automatically. To release them, create a GitHub Release for the matching `package.json` version tag (for example, `v1.2.0`), then attach the generated installers from `release/` on the [GitHub Releases](https://github.com/Swkings/MQTT-Nexus/releases) page.
+
+Attach the generated `latest*.yml` and `*.blockmap` files alongside the installers so the Windows NSIS installer and Linux AppImage can find updates. macOS automatic updates require signed application builds. The Windows portable build and Linux `.deb`/`.rpm` packages must be updated manually from Releases. Locally generated `.pkg` files can also be attached to the release.
+
+Runtime error logs are written to `~/.mqtt-nexus/main.log`.
+
 ---
 
 ## 🔌 Protocol Support

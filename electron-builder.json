@@ -32,5 +32,9 @@
     "allowToChangeInstallationDirectory": true,
     "createDesktopShortcut": true
   },
-  "publish": null
+  "publish": {
+    "provider": "github",
+    "owner": "Swkings",
+    "repo": "MQTT-Nexus"
+  }
 }

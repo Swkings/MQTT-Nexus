@@ -1,9 +1,10 @@
-import { app, BrowserWindow, ipcMain, Menu, type WebContents } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, Menu, type WebContents } from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import mqtt, { MqttClient, IClientOptions } from 'mqtt';
 import fs from 'fs';
 import { inspect } from 'node:util';
+import { autoUpdater } from 'electron-updater';
 
 const originalConsoleError = console.error.bind(console);
 
@@ -16,7 +17,7 @@ function appendMainLog(level: string, values: unknown[]) {
   }).join(' ');
 
   try {
-    const logDirectory = path.join(app.getPath('userData'), 'logs');
+    const logDirectory = path.join(app.getPath('home'), '.mqtt-nexus');
     fs.mkdirSync(logDirectory, { recursive: true });
     fs.appendFileSync(
       path.join(logDirectory, 'main.log'),
@@ -67,6 +68,54 @@ function stopMqttClient() {
   const client = mqttClient;
   mqttClient = null;
   client?.end(true);
+}
+
+function configureAutoUpdates() {
+  if (!app.isPackaged) {
+    return;
+  }
+
+  if (process.platform === 'linux' && !process.env.APPIMAGE) {
+    console.info('[Updater] Linux automatic updates require the AppImage package.');
+    return;
+  }
+
+  autoUpdater.on('error', (error) => {
+    console.error('[Updater] Update check or installation failed:', error);
+  });
+
+  autoUpdater.on('update-available', (info) => {
+    console.info(`[Updater] Version ${info.version} is available.`);
+  });
+
+  autoUpdater.on('update-not-available', () => {
+    console.info('[Updater] The app is up to date.');
+  });
+
+  autoUpdater.on('update-downloaded', async (info) => {
+    try {
+      const { response } = await dialog.showMessageBox({
+        type: 'info',
+        title: 'Update ready',
+        message: `MQTT Nexus ${info.version} has been downloaded.`,
+        detail: 'Restart the app to install the update.',
+        buttons: ['Restart now', 'Later'],
+        defaultId: 0,
+        cancelId: 1,
+      });
+
+      if (response === 0) {
+        stopMqttClient();
+        autoUpdater.quitAndInstall();
+      }
+    } catch (error) {
+      console.error('[Updater] Could not prompt to install the update:', error);
+    }
+  });
+
+  autoUpdater.checkForUpdates().catch((error: unknown) => {
+    console.error('[Updater] Could not check for updates:', error);
+  });
 }
 
 async function createWindow() {
@@ -268,6 +317,7 @@ ipcMain.handle('mqtt:disconnect', async () => {
 
 app.whenReady().then(() => {
   createWindow();
+  configureAutoUpdates();
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
