@@ -153,9 +153,23 @@ npm run electron:build:linux
 
 Build artifacts will be in the `release/` directory.
 
+After building packages, upload them to GitHub Releases. The script creates the release with generated notes if it does not exist:
+
+```bash
+npm run release:upload
+```
+
+By default, it uses the version in `package.json` and uploads matching packages and updater metadata from `release/`. Select another version or tag and specific files with:
+
+```bash
+npm run release:upload -- --version 1.1.6 --tag v1.1.6 --files "release/MQTT Nexus-1.1.6.AppImage" release/latest-linux.yml
+```
+
+It requires GitHub CLI (`gh`) to be installed and authenticated with permission to create releases and upload assets. The release tag must identify the source commit; if GitHub CLI creates a missing tag, it uses the repository's default branch. Preview file selection without contacting GitHub with `npm run release:upload -- --version 1.1.6 --files "release/MQTT Nexus-1.1.6.AppImage" --dry-run`.
+
 ### Releases and Updates
 
-Build each platform package locally with the commands above. Local builds do not publish automatically. To release them, create a GitHub Release for the matching `package.json` version tag (for example, `v1.2.0`), then attach the generated installers from `release/` on the [GitHub Releases](https://github.com/Swkings/MQTT-Nexus/releases) page.
+Build each platform package locally with the commands above. Local builds do not publish automatically. To release them, run `npm run release:upload` or attach files manually on the [GitHub Releases](https://github.com/Swkings/MQTT-Nexus/releases) page.
 
 Attach the generated `latest*.yml` and `*.blockmap` files alongside the installers so the Windows NSIS installer and Linux AppImage can find updates. macOS automatic updates require signed application builds. The Windows portable build and Linux `.deb`/`.rpm` packages must be updated manually from Releases. Locally generated `.pkg` files can also be attached to the release.
 

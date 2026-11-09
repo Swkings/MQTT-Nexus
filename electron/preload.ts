@@ -12,6 +12,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
     chrome: process.versions.chrome,
     electron: process.versions.electron,
   },
+  updates: {
+    check: () => ipcRenderer.invoke('app:check-for-updates'),
+  },
   // MQTT IPC 通信 API
   mqtt: {
     connect: (url: string, options: any) => {

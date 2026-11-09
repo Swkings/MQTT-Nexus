@@ -72,6 +72,49 @@ function stopMqttClient() {
   client?.end(true);
 }
 
+type UpdateCheckResponse = {
+  status: 'available' | 'current' | 'manual' | 'unavailable' | 'error';
+  version?: string;
+  message?: string;
+};
+
+let updateCheckPromise: Promise<UpdateCheckResponse> | null = null;
+
+function checkForUpdates(): Promise<UpdateCheckResponse> {
+  if (updateCheckPromise) {
+    return updateCheckPromise;
+  }
+
+  const checkPromise = (async (): Promise<UpdateCheckResponse> => {
+    if (!app.isPackaged) {
+      return { status: 'unavailable', message: 'Update checks are available in packaged desktop builds.' };
+    }
+
+    if (process.platform === 'linux' && !process.env.APPIMAGE) {
+      return { status: 'manual', message: 'Linux package updates must be installed manually from GitHub Releases.' };
+    }
+
+    try {
+      const result = await autoUpdater.checkForUpdates();
+      if (result?.isUpdateAvailable) {
+        return { status: 'available', version: result.updateInfo.version };
+      }
+      return { status: 'current', version: app.getVersion() };
+    } catch (error) {
+      console.error('[Updater] Could not check for updates:', error);
+      return {
+        status: 'error',
+        message: error instanceof Error ? error.message : String(error),
+      };
+    }
+  })().finally(() => {
+    updateCheckPromise = null;
+  });
+
+  updateCheckPromise = checkPromise;
+  return checkPromise;
+}
+
 function configureAutoUpdates() {
   if (!app.isPackaged) {
     return;
@@ -115,10 +158,10 @@ function configureAutoUpdates() {
     }
   });
 
-  autoUpdater.checkForUpdates().catch((error: unknown) => {
-    console.error('[Updater] Could not check for updates:', error);
-  });
+  void checkForUpdates();
 }
+
+ipcMain.handle('app:check-for-updates', () => checkForUpdates());
 
 async function createWindow() {
   const preloadPath = path.join(__dirname, 'preload.js');

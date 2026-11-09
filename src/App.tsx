@@ -203,6 +203,7 @@ export default function App() {
   const [editingBroker, setEditingBroker] = useState<BrokerConfig | null>(null);
   const [activeMainView, setActiveMainView] = useState<'messages' | 'publish'>('messages');
   const [configFeedback, setConfigFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [isCheckingForUpdates, setIsCheckingForUpdates] = useState(false);
   
   const favoriteTopics = useMemo(
     () => brokers.find(broker => broker.id === activeBrokerId)?.favoriteTopics || [],
@@ -447,6 +448,31 @@ export default function App() {
     }
   };
 
+  const handleCheckForUpdates = async () => {
+    if (!window.electronAPI?.updates || isCheckingForUpdates) return;
+
+    setIsCheckingForUpdates(true);
+    try {
+      const result = await window.electronAPI.updates.check();
+      if (result.status === 'available') {
+        setConfigFeedback({ type: 'success', message: `Version ${result.version} found. Downloading now.` });
+      } else if (result.status === 'current') {
+        setConfigFeedback({ type: 'success', message: `MQTT Nexus ${result.version} is up to date.` });
+      } else if (result.status === 'error') {
+        setConfigFeedback({ type: 'error', message: result.message || 'Could not check for updates.' });
+      } else {
+        setConfigFeedback({ type: 'error', message: result.message || 'Updates are unavailable for this build.' });
+      }
+    } catch (error) {
+      setConfigFeedback({
+        type: 'error',
+        message: error instanceof Error ? error.message : 'Could not check for updates.',
+      });
+    } finally {
+      setIsCheckingForUpdates(false);
+    }
+  };
+
   return (
     <ThemeProvider theme={theme} setTheme={setTheme}>
       <div className={cn(
@@ -532,6 +558,8 @@ export default function App() {
                         onOpenLibrary={() => setIsLibraryManagerOpen(true)}
                         onExportConfig={handleExportConfig}
                         onImportConfig={handleImportConfig}
+                        onCheckForUpdates={handleCheckForUpdates}
+                        isCheckingForUpdates={isCheckingForUpdates}
                         configFeedback={configFeedback}
                       />
                     </div>
