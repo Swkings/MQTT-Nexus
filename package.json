@@ -1,7 +1,7 @@
 {
   "name": "mqtt-nexus",
   "private": true,
-  "version": "1.1.7",
+  "version": "1.1.8",
   "description": "MQTT Nexus - MQTT Desktop Client",
   "author": {
     "name": "MQTT Nexus Team",
@@ -20,7 +20,7 @@
     "electron:build": "npm run build && tsc -p electron/tsconfig.json && electron-builder --publish never",
     "electron:build:win": "npm run electron:build -- -w",
     "electron:build:mac": "npm run electron:build -- -m",
-    "electron:build:linux": "npm run electron:build -- -l",
+    "electron:build:linux": "npm run electron:build -- -l --config.productName=MQTT-Nexus --config.linux.desktop.Name='MQTT Nexus'",
     "release:upload": "node scripts/publish-release.js"
   },
   "dependencies": {
