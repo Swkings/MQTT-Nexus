@@ -458,6 +458,8 @@ export default function App() {
         setConfigFeedback({ type: 'success', message: `Version ${result.version} found. Downloading now.` });
       } else if (result.status === 'current') {
         setConfigFeedback({ type: 'success', message: `MQTT Nexus ${result.version} is up to date.` });
+      } else if (result.status === 'manual') {
+        setConfigFeedback({ type: 'success', message: result.message || `Version ${result.version} is available. Opened the downloads page for manual installation.` });
       } else if (result.status === 'error') {
         setConfigFeedback({ type: 'error', message: result.message || 'Could not check for updates.' });
       } else {

@@ -13,7 +13,7 @@ const __dirname = path.dirname(__filename);
 
 console.log('Testing Electron preload...\n');
 console.log('__dirname:', __dirname);
-console.log('preload.js path:', path.join(__dirname, 'dist-electron', 'preload.js'));
+console.log('preload.js path:', path.join(__dirname, '..', 'dist-electron', 'preload.js'));
 
 let win;
 
@@ -24,7 +24,7 @@ app.whenReady().then(() => {
     width: 800,
     height: 600,
     webPreferences: {
-      preload: path.join(__dirname, 'dist-electron', 'preload.js'),
+      preload: path.join(__dirname, '..', 'dist-electron', 'preload.js'),
       nodeIntegration: true,
       contextIsolation: false,
     },

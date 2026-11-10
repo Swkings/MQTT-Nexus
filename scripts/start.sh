@@ -5,7 +5,7 @@
 # =============================================================================
 # 描述：快速启动 MQTT-Nexus 开发环境
 # 支持：Linux、macOS、Windows (Git Bash)
-# 用法：./start.sh [--electron] [--browser]
+# 用法：./scripts/start.sh [--electron] [--browser]
 # =============================================================================
 
 set -e
@@ -46,7 +46,7 @@ error() {
 check_installation() {
     if [ ! -d "node_modules" ]; then
         warning "Dependencies not installed. Running installation..."
-        ./install.sh
+        ./scripts/install.sh
     fi
 }
 
@@ -76,7 +76,7 @@ start_browser() {
 show_usage() {
     echo "MQTT-Nexus Quick Start Script"
     echo ""
-    echo "Usage: ./start.sh [OPTIONS]"
+    echo "Usage: ./scripts/start.sh [OPTIONS]"
     echo ""
     echo "Options:"
     echo "  --electron    Start in Electron desktop mode (default)"
@@ -84,8 +84,8 @@ show_usage() {
     echo "  --help        Show this help message"
     echo ""
     echo "Examples:"
-    echo "  ./start.sh              # Start Electron mode (default)"
-    echo "  ./start.sh --browser    # Start browser mode"
+    echo "  ./scripts/start.sh              # Start Electron mode (default)"
+    echo "  ./scripts/start.sh --browser    # Start browser mode"
     echo ""
     echo "Note: Electron mode provides full MQTT protocol support"
     echo "      Browser mode only supports ws:// and wss:// protocols"
