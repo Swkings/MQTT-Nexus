@@ -1,7 +1,7 @@
 {
   "name": "mqtt-nexus",
   "private": true,
-  "version": "1.1.8",
+  "version": "1.2.0",
   "description": "MQTT Nexus - MQTT Desktop Client",
   "author": {
     "name": "MQTT Nexus Team",

@@ -8,14 +8,14 @@
 
 ```powershell
 # 一键安装
-powershell -Command "iwr -UseBasicParsing https://raw.githubusercontent.com/Swkings/MQTT-Nexus/develop/install-online.ps1 | iex"
+powershell -Command "iwr -UseBasicParsing https://raw.githubusercontent.com/Swkings/MQTT-Nexus/develop/scripts/install-online.ps1 | iex"
 ```
 
 **或者下载后运行：**
 
 ```powershell
 # 1. 下载脚本
-iwr -UseBasicParsing https://raw.githubusercontent.com/Swkings/MQTT-Nexus/develop/install-online.ps1 -OutFile install-online.ps1
+iwr -UseBasicParsing https://raw.githubusercontent.com/Swkings/MQTT-Nexus/develop/scripts/install-online.ps1 -OutFile install-online.ps1
 
 # 2. 运行脚本
 .\install-online.ps1
@@ -26,8 +26,11 @@ iwr -UseBasicParsing https://raw.githubusercontent.com/Swkings/MQTT-Nexus/develo
 **命令提示符 (CMD):**
 
 ```batch
-# 一键安装
-install-online.bat
+# 一键在线安装（PowerShell）
+powershell -Command "iwr -UseBasicParsing https://raw.githubusercontent.com/Swkings/MQTT-Nexus/main/scripts/install-online.ps1 | iex"
+
+# 克隆仓库后本地安装（CMD）
+scripts\install.bat
 ```
 
 **注意**: 
@@ -82,7 +85,7 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process
 powershell -ExecutionPolicy Bypass -File install-online.ps1
 
 # 方法 3：使用 Invoke-Expression
-iwr -UseBasicParsing https://raw.githubusercontent.com/Swkings/MQTT-Nexus/main/install-online.ps1 | iex
+iwr -UseBasicParsing https://raw.githubusercontent.com/Swkings/MQTT-Nexus/main/scripts/install-online.ps1 | iex
 ```
 
 ### 问题 2: iwr 或 iex 命令不存在
@@ -93,7 +96,7 @@ iwr -UseBasicParsing https://raw.githubusercontent.com/Swkings/MQTT-Nexus/main/i
 
 ```powershell
 # 使用完整命令
-Invoke-WebRequest -UseBasicParsing https://raw.githubusercontent.com/Swkings/MQTT-Nexus/main/install-online.ps1 | Invoke-Expression
+Invoke-WebRequest -UseBasicParsing https://raw.githubusercontent.com/Swkings/MQTT-Nexus/main/scripts/install-online.ps1 | Invoke-Expression
 
 # 或者下载安装 PowerShell 7
 # https://github.com/PowerShell/PowerShell/releases
@@ -151,7 +154,7 @@ Access to the path is denied
 | 方式 | 命令 | 适用场景 |
 |------|------|---------|
 | **PowerShell (推荐)** | `iwr ... \| iex` | 现代 Windows，一键安装 |
-| **CMD** | `install-online.bat` | 旧版 Windows，传统方式 |
+| **CMD** | `scripts\install-online.bat` | 旧版 Windows，传统方式 |
 | **手动安装** | 多步骤 | 学习、调试、定制 |
 
 ---

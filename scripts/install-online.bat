@@ -1,11 +1,11 @@
 @echo off
 REM =============================================================================
-REM MQTT-Nexus 一键安装脚本 (Windows 版本)
+REM MQTT-Nexus 在线安装脚本 (Windows 版本)
 REM =============================================================================
-REM 描述：自动安装 MQTT-Nexus 应用的所有依赖并完成构建
+REM 描述：通过 PowerShell 直接下载并安装 MQTT-Nexus 应用
 REM 支持：Windows (PowerShell/CMD)
-REM 要求：Node.js >= 18.x, npm >= 9.x
-REM 用法：install.bat [--skip-build] [--electron]
+REM 要求：Node.js >= 18.x, npm >= 9.x, Git
+REM 用法：在 CMD 中运行 scripts\install-online.bat
 REM =============================================================================
 
 setlocal enabledelayedexpansion
@@ -19,6 +19,14 @@ set "YELLOW=[1;33m"
 set "BLUE=[0;34m"
 set "CYAN=[0;36m"
 set "NC=[0m"
+
+REM -----------------------------------------------------------------------------
+REM 配置
+REM -----------------------------------------------------------------------------
+set "REPO_URL=https://github.com/swkings/MQTT-Nexus.git"
+set "BRANCH=main"
+set "INSTALL_DIR=mqtt-nexus"
+set "BUILD_ELECTRON=true"
 
 REM -----------------------------------------------------------------------------
 REM 输出函数
@@ -45,7 +53,7 @@ echo %CYAN%!%NC% [STEP] %NC% %~1
 goto :eof
 
 REM -----------------------------------------------------------------------------
-REM 检查 Node.js 和 npm
+REM 检查系统要求
 REM -----------------------------------------------------------------------------
 :check_requirements
 call :step "Checking system requirements..."
@@ -76,6 +84,44 @@ if %errorlevel% neq 0 (
 for /f "tokens=*" %%i in ('npm -v') do set NPM_VERSION=%%i
 call :success "npm version: !NPM_VERSION!"
 
+where git >nul 2>nul
+if %errorlevel% neq 0 (
+    call :error "Git is not installed. Please install Git first."
+    exit /b 1
+)
+
+call :success "Git is available"
+goto :eof
+
+REM -----------------------------------------------------------------------------
+REM 下载仓库
+REM -----------------------------------------------------------------------------
+:download_repo
+call :step "Downloading MQTT-Nexus from %REPO_URL%..."
+
+REM 检查目录是否已存在
+if exist "%INSTALL_DIR%" (
+    call :warning "Directory '%INSTALL_DIR%' already exists."
+    set /p confirm="Do you want to overwrite it? (y/N): "
+    if /i "!confirm!"=="y" (
+        rmdir /s /q "%INSTALL_DIR%"
+        call :info "Removed existing directory"
+    ) else (
+        call :error "Installation cancelled"
+        exit /b 1
+    )
+)
+
+REM 使用 git clone 下载
+call :info "Cloning repository..."
+git clone --depth 1 --branch %BRANCH% %REPO_URL% %INSTALL_DIR%
+
+if %errorlevel% equ 0 (
+    call :success "Repository downloaded successfully!"
+) else (
+    call :error "Failed to download repository"
+    exit /b 1
+)
 goto :eof
 
 REM -----------------------------------------------------------------------------
@@ -84,17 +130,20 @@ REM ----------------------------------------------------------------------------
 :install_dependencies
 call :step "Installing dependencies..."
 
+cd %INSTALL_DIR%
+
 call :info "Cleaning up old node_modules (if exists)..."
 if exist node_modules rmdir /s /q node_modules
 
 call :info "Installing npm dependencies (this may take a few minutes)..."
 call npm ci
-if %errorlevel% neq 0 (
+
+if %errorlevel% equ 0 (
+    call :success "Dependencies installed successfully!"
+) else (
     call :error "Failed to install dependencies"
     exit /b 1
 )
-
-call :success "Dependencies installed successfully!"
 goto :eof
 
 REM -----------------------------------------------------------------------------
@@ -111,6 +160,8 @@ if not exist .env.local (
 ) else (
     call :info ".env.local already exists, skipping..."
 )
+
+cd ..
 goto :eof
 
 REM -----------------------------------------------------------------------------
@@ -119,14 +170,19 @@ REM ----------------------------------------------------------------------------
 :build_app
 call :step "Building application..."
 
+cd %INSTALL_DIR%
+
 call :info "Running npm build..."
 call npm run build
-if %errorlevel% neq 0 (
+
+if %errorlevel% equ 0 (
+    call :success "Application built successfully!"
+) else (
     call :error "Failed to build application"
     exit /b 1
 )
 
-call :success "Application built successfully!"
+cd ..
 goto :eof
 
 REM -----------------------------------------------------------------------------
@@ -134,6 +190,8 @@ REM 构建 Electron 应用
 REM -----------------------------------------------------------------------------
 :build_electron
 call :step "Building Electron desktop application..."
+
+cd %INSTALL_DIR%
 
 call :info "Compiling Electron TypeScript..."
 call npx tsc -p electron/tsconfig.json
@@ -149,8 +207,9 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 
+cd ..
 call :success "Electron application built successfully!"
-call :info "Installer location: .\release\"
+call :info "Installer location: %INSTALL_DIR%\release\"
 goto :eof
 
 REM -----------------------------------------------------------------------------
@@ -162,9 +221,9 @@ if not "%BUILD_ELECTRON%"=="true" goto :eof
 call :step "Installing Electron desktop application..."
 
 set "INSTALLER="
-for /f "delims=" %%f in ('dir /b /a-d /o-d "release\*Setup*.exe" 2^>nul') do if not defined INSTALLER set "INSTALLER=release\%%f"
+for /f "delims=" %%f in ('dir /b /a-d /o-d "%INSTALL_DIR%\release\*Setup*.exe" 2^>nul') do if not defined INSTALLER set "INSTALLER=%INSTALL_DIR%\release\%%f"
 if not defined INSTALLER (
-    for /f "delims=" %%f in ('dir /b /a-d /o-d "release\*.exe" 2^>nul') do if not defined INSTALLER set "INSTALLER=release\%%f"
+    for /f "delims=" %%f in ('dir /b /a-d /o-d "%INSTALL_DIR%\release\*.exe" 2^>nul') do if not defined INSTALLER set "INSTALLER=%INSTALL_DIR%\release\%%f"
 )
 
 if defined INSTALLER (
@@ -176,7 +235,7 @@ if defined INSTALLER (
         call :success "Desktop application installed successfully!"
     )
 ) else (
-    call :warning "No Windows installer found in .\release\."
+    call :warning "No Windows installer found in %INSTALL_DIR%\release\."
 )
 goto :eof
 
@@ -190,29 +249,25 @@ echo %GREEN%!%NC% ║          MQTT-Nexus Installation Complete! 🎉           
 echo %GREEN%!%NC% ╚════════════════════════════════════════════════════════╝
 echo.
 
+call :info "Application installed in: %CD%\%INSTALL_DIR%"
 if "%BUILD_ELECTRON%"=="true" (
     call :info "Desktop application built and installed successfully!"
-    call :info "Installers are available in: .\release\"
-    echo.
-    echo %CYAN%!%NC% Quick Start:
-    echo   %YELLOW%!%NC% Run Desktop App:    .\release\MQTT-Nexus[version].[ext]
-    echo   %YELLOW%!%NC% Development Mode:   npm run electron:dev
-    echo   %YELLOW%!%NC% Rebuild App:        npm run electron:build
+    call :info "Installers are available in: %INSTALL_DIR%\release\"
 ) else (
     call :info "Web application built successfully!"
-    call :info "To run development server: npm run dev"
-    call :info "To build Electron app: npm run electron:build"
-    echo.
-    echo %CYAN%!%NC% Quick Start:
-    echo   %YELLOW%!%NC% Development:   npm run dev
-    echo   %YELLOW%!%NC% Production:    npm run build ^&^& npm run preview
-    echo   %YELLOW%!%NC% Desktop App:   npm run electron:build
 )
+
+echo.
+echo %CYAN%!%NC% Quick Start:
+echo   cd %INSTALL_DIR%
+echo   %YELLOW%npm run dev%NC%              REM Start development server
+echo   %YELLOW%npm run build%NC%            REM Build for production
+echo   %YELLOW%npm run electron:dev%NC%     REM Start Electron desktop app
 
 echo.
 echo %CYAN%!%NC% Documentation:
 echo   Check README.md for more information
-echo   Environment config: .env.local
+echo   Environment config: %INSTALL_DIR%\.env.local
 
 echo.
 echo %GREEN%!%NC% Happy coding! 🚀
@@ -223,24 +278,31 @@ REM ----------------------------------------------------------------------------
 REM 显示使用说明
 REM -----------------------------------------------------------------------------
 :show_usage
-echo MQTT-Nexus Installation Script (Windows)
+echo MQTT-Nexus Online Installation Script (Windows)
 echo.
-echo Usage: install.bat [OPTIONS]
+echo Usage: scripts\install-online.bat [--no-electron]
 echo.
 echo Options:
-echo   --skip-build      Skip the build step ^(only install dependencies^)
-echo   --no-electron     Skip Electron desktop application build ^(web only^)
-echo   --help            Show this help message
+echo   --no-electron   Skip Electron desktop application build and system install
+echo   --help          Show this help message
 echo.
 echo Examples:
-echo   install.bat                    Full installation with Electron app ^(default^)
-echo   install.bat --skip-build       Only install dependencies
-echo   install.bat --no-electron      Build web version only
+echo   REM PowerShell users should run the .ps1 installer
+echo   powershell -Command "iwr -UseBasicParsing https://raw.githubusercontent.com/swkings/MQTT-Nexus/main/scripts/install-online.ps1 ^| iex"
+echo.
+echo   REM Download this .bat file and run it from CMD
+echo   scripts\install-online.bat
 echo.
 echo Requirements:
 echo   - Node.js ^>= 18.x
 echo   - npm ^>= 9.x
-echo   - Git ^(optional^)
+echo   - Git
+echo.
+echo Alternative Installation Methods:
+echo   REM Clone and install manually
+echo   git clone https://github.com/swkings/MQTT-Nexus.git
+echo   cd MQTT-Nexus
+echo   scripts\install.bat
 echo.
 goto :eof
 
@@ -249,26 +311,26 @@ REM 主程序
 REM -----------------------------------------------------------------------------
 echo.
 echo %CYAN%!%NC% ╔════════════════════════════════════════════════════════╗
-echo %CYAN%!%NC% ║         MQTT-Nexus Installation Script                  ║
+echo %CYAN%!%NC% ║         MQTT-Nexus Online Installation                  ║
 echo %CYAN%!%NC% ║         AI-Powered MQTT Desktop Client                  ║
 echo %CYAN%!%NC% ╚════════════════════════════════════════════════════════╝
 echo.
 
 REM 解析参数
-set "SKIP_BUILD=false"
-REM 默认构建 Electron 桌面应用
-set "BUILD_ELECTRON=true"
-
 :parse_args
 if "%~1"=="" goto :main
-if /i "%~1"=="--skip-build" set "SKIP_BUILD=true" & shift & goto :parse_args
 if /i "%~1"=="--no-electron" set "BUILD_ELECTRON=false" & shift & goto :parse_args
 if /i "%~1"=="--help" call :show_usage & exit /b 0
+if /i "%~1"=="-h" call :show_usage & exit /b 0
 call :error "Unknown option: %~1. Use --help for usage information."
 
 :main
+
 REM 检查系统要求
 call :check_requirements
+
+REM 下载仓库
+call :download_repo
 
 REM 安装依赖
 call :install_dependencies
@@ -277,16 +339,12 @@ REM 配置环境
 call :setup_environment
 
 REM 构建应用
-if "%SKIP_BUILD%"=="false" (
-    call :build_app
-    
-    REM 构建 Electron（默认执行）
-    if "%BUILD_ELECTRON%"=="true" (
-        call :build_electron
-        call :install_electron_package
-    )
-) else (
-    call :warning "Skipping build step as requested"
+call :build_app
+
+REM 构建并安装 Electron（默认执行）
+if "%BUILD_ELECTRON%"=="true" (
+    call :build_electron
+    call :install_electron_package
 )
 
 REM 显示完成信息

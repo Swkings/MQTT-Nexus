@@ -43,29 +43,28 @@ Install directly without cloning the repository:
 **Linux/macOS:**
 ```bash
 # Install from main branch
-curl -fsSL https://raw.githubusercontent.com/swkings/MQTT-Nexus/main/install-online.sh | bash
+curl -fsSL https://raw.githubusercontent.com/swkings/MQTT-Nexus/main/scripts/install-online.sh | bash
 
 # Or using wget
-wget -qO- https://raw.githubusercontent.com/swkings/MQTT-Nexus/main/install-online.sh | bash
+wget -qO- https://raw.githubusercontent.com/swkings/MQTT-Nexus/main/scripts/install-online.sh | bash
 ```
 
 **Windows (PowerShell):**
-```
+```powershell
 # Install from main branch (PowerShell 5.1+ or PowerShell 7+)
-powershell -Command "iwr -UseBasicParsing https://raw.githubusercontent.com/swkings/MQTT-Nexus/main/install-online.ps1 | iex"
+powershell -Command "iwr -UseBasicParsing https://raw.githubusercontent.com/swkings/MQTT-Nexus/main/scripts/install-online.ps1 | iex"
 
 # Or download and run manually
 # 1. Download the script
-iwr -UseBasicParsing https://raw.githubusercontent.com/swkings/MQTT-Nexus/main/install-online.ps1 -OutFile install-online.ps1
+iwr -UseBasicParsing https://raw.githubusercontent.com/swkings/MQTT-Nexus/main/scripts/install-online.ps1 -OutFile install-online.ps1
 
 # 2. Run the script
 .\install-online.ps1
 ```
 
 **Note**: The `.bat` version is for CMD only. For PowerShell, use the `.ps1` version.
-```
 
-#### 📦 Clone and Install
+#### Clone and Install
 
 **Linux/macOS:**
 ```bash
@@ -74,16 +73,17 @@ git clone https://github.com/swkings/MQTT-Nexus.git
 cd MQTT-Nexus
 
 # Run the installation script
-chmod +x install.sh
-./install.sh
+chmod +x scripts/install.sh
+./scripts/install.sh
 
 # Options:
-# ./install.sh --skip-build    # Only install dependencies
-# ./install.sh --electron      # Build Electron desktop app
+# ./scripts/install.sh --skip-build   # Only install dependencies
+# ./scripts/install.sh --no-electron  # Build web version only
 ```
 
 **Windows:**
 ```bash
+scripts\install.bat
 ```
 
 #### Manual Installation
@@ -132,6 +132,24 @@ GEMINI_API_KEY=your_api_key_here
 
 ## 📦 Build & Distribution
 
+Run the common tasks with [go-task](https://taskfile.dev/):
+
+```bash
+task lint
+task run
+task build
+task upload
+```
+
+Run the common repository tasks with [go-task](https://taskfile.dev/):
+
+```bash
+task lint
+task run
+task build
+task upload
+```
+
 ### Build for Current Platform
 
 ```bash
@@ -171,7 +189,7 @@ It requires GitHub CLI (`gh`) to be installed and authenticated with permission 
 
 Build each platform package locally with the commands above. Local builds do not publish automatically. To release them, run `npm run release:upload` or attach files manually on the [GitHub Releases](https://github.com/Swkings/MQTT-Nexus/releases) page.
 
-Attach the generated `latest*.yml` and `*.blockmap` files alongside the installers so the Windows NSIS installer and Linux AppImage can find updates. macOS automatic updates require signed application builds. The Windows portable build and Linux `.deb`/`.rpm` packages must be updated manually from Releases. Locally generated `.pkg` files can also be attached to the release.
+Attach the generated `latest*.yml` and `*.blockmap` files alongside the installers so the Windows NSIS installer and Linux AppImage can find updates. macOS automatic updates require signed application builds. The Windows portable build and Linux `.deb`/`.rpm` packages must be updated manually; checking from a Linux package first compares the installed version with the latest GitHub Release, then opens the download page only when a newer version is available. Locally generated `.pkg` files can also be attached to the release.
 
 Runtime error logs are written to `~/.mqtt-nexus/main.log`.
 
@@ -202,8 +220,10 @@ Runtime error logs are written to `~/.mqtt-nexus/main.log`.
 
 ## 📚 Documentation
 
-- **[Electron Guide](ELECTRON.md)** - Electron setup and build instructions
-- **[Protocol Guide](MQTT_PROTOCOL_GUIDE.md)** - Complete MQTT protocol usage guide
+- **[Installation Guide](INSTALL.md)** - Installation and troubleshooting
+- **[Online Installation Guide](ONLINE_INSTALL.md)** - Online installation options
+- **[Windows Installation Guide](WINDOWS_INSTALL.md)** - Windows-specific instructions
+- **[Quick Reference](QUICK_REFERENCE.md)** - Common commands and configuration
 - **[AI Studio App](https://ai.studio/apps/9135169b-d016-48af-b698-76e4e67fece04)** - View in AI Studio
 
 ---

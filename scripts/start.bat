@@ -4,7 +4,7 @@ REM MQTT-Nexus 快速启动脚本 (Windows 版本)
 REM =============================================================================
 REM 描述：快速启动 MQTT-Nexus 开发环境
 REM 支持：Windows (PowerShell/CMD)
-REM 用法：start.bat [--electron] [--browser]
+REM 用法：scripts\start.bat [--electron] [--browser]
 REM =============================================================================
 
 setlocal enabledelayedexpansion
@@ -44,7 +44,7 @@ REM ----------------------------------------------------------------------------
 :check_installation
 if not exist node_modules (
     call :warning "Dependencies not installed. Running installation..."
-    call install.bat
+    call scripts\install.bat
 )
 goto :eof
 
@@ -74,7 +74,7 @@ REM ----------------------------------------------------------------------------
 :show_usage
 echo MQTT-Nexus Quick Start Script (Windows)
 echo.
-echo Usage: start.bat [OPTIONS]
+echo Usage: scripts\start.bat [OPTIONS]
 echo.
 echo Options:
 echo   --electron    Start in Electron desktop mode ^(default^)
@@ -82,8 +82,8 @@ echo   --browser     Start in web browser mode
 echo   --help        Show this help message
 echo.
 echo Examples:
-echo   start.bat              Start Electron mode ^(default^)
-echo   start.bat --browser    Start browser mode
+echo   scripts\start.bat              Start Electron mode ^(default^)
+echo   scripts\start.bat --browser    Start browser mode
 echo.
 echo Note: Electron mode provides full MQTT protocol support
 echo       Browser mode only supports ws:// and wss:// protocols

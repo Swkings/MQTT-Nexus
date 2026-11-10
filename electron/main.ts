@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, Menu, type WebContents } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, Menu, shell, type WebContents } from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import mqtt, { MqttClient, IClientOptions } from 'mqtt';
@@ -7,6 +7,8 @@ import { inspect } from 'node:util';
 import electronUpdater from 'electron-updater';
 
 const { autoUpdater } = electronUpdater;
+const releasesUrl = 'https://github.com/Swkings/MQTT-Nexus/releases/latest';
+const latestReleaseApiUrl = 'https://api.github.com/repos/Swkings/MQTT-Nexus/releases/latest';
 
 const originalConsoleError = console.error.bind(console);
 
@@ -78,6 +80,51 @@ type UpdateCheckResponse = {
   message?: string;
 };
 
+function compareVersions(leftVersion: string, rightVersion: string): number {
+  const parseVersion = (version: string) => {
+    const parts = version.replace(/^v/i, '').split(/[+-]/, 1)[0].split('.');
+    if (parts.length !== 3 || parts.some((part) => !/^\d+$/.test(part))) {
+      throw new Error(`Invalid release version: ${version}`);
+    }
+    return parts.map(Number);
+  };
+
+  const left = parseVersion(leftVersion);
+  const right = parseVersion(rightVersion);
+  for (let index = 0; index < 3; index += 1) {
+    if (left[index] !== right[index]) {
+      return left[index] > right[index] ? 1 : -1;
+    }
+  }
+  return 0;
+}
+
+async function checkLatestGithubRelease(): Promise<UpdateCheckResponse> {
+  const response = await fetch(latestReleaseApiUrl, {
+    headers: {
+      Accept: 'application/vnd.github+json',
+      'X-GitHub-Api-Version': '2022-11-28',
+      'User-Agent': 'MQTT-Nexus',
+    },
+    signal: AbortSignal.timeout(10000),
+  });
+
+  if (!response.ok) {
+    throw new Error(`GitHub returned HTTP ${response.status} while checking for updates.`);
+  }
+
+  const release = await response.json() as { tag_name?: unknown };
+  if (typeof release.tag_name !== 'string') {
+    throw new Error('GitHub latest release did not include a version tag.');
+  }
+
+  const latestVersion = release.tag_name.replace(/^v/i, '');
+  const currentVersion = app.getVersion();
+  return compareVersions(latestVersion, currentVersion) > 0
+    ? { status: 'manual', version: latestVersion }
+    : { status: 'current', version: currentVersion };
+}
+
 let updateCheckPromise: Promise<UpdateCheckResponse> | null = null;
 
 function checkForUpdates(): Promise<UpdateCheckResponse> {
@@ -91,7 +138,15 @@ function checkForUpdates(): Promise<UpdateCheckResponse> {
     }
 
     if (process.platform === 'linux' && !process.env.APPIMAGE) {
-      return { status: 'manual', message: 'Linux package updates must be installed manually from GitHub Releases.' };
+      try {
+        return await checkLatestGithubRelease();
+      } catch (error) {
+        console.error('[Updater] Could not check the latest GitHub release:', error);
+        return {
+          status: 'error',
+          message: error instanceof Error ? error.message : String(error),
+        };
+      }
     }
 
     try {
@@ -161,7 +216,19 @@ function configureAutoUpdates() {
   void checkForUpdates();
 }
 
-ipcMain.handle('app:check-for-updates', () => checkForUpdates());
+ipcMain.handle('app:check-for-updates', async () => {
+  const result = await checkForUpdates();
+  if (result.status === 'manual') {
+    try {
+      await shell.openExternal(releasesUrl);
+      return { ...result, message: `Version ${result.version} is available. The download page has been opened for manual installation.` };
+    } catch (error) {
+      console.error('[Updater] Could not open the download page:', error);
+      return { status: 'error', message: 'Could not open the GitHub Releases download page.' };
+    }
+  }
+  return result;
+});
 
 async function createWindow() {
   const preloadPath = path.join(__dirname, 'preload.js');
