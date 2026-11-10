@@ -48,24 +48,24 @@ git --version
 
 ```bash
 # 从 main 分支安装
-curl -fsSL https://raw.githubusercontent.com/swkings/MQTT-Nexus/main/install-online.sh | bash
+curl -fsSL https://raw.githubusercontent.com/swkings/MQTT-Nexus/main/scripts/install-online.sh | bash
 
 # 或使用 wget
-wget -qO- https://raw.githubusercontent.com/swkings/MQTT-Nexus/main/install-online.sh | bash
+wget -qO- https://raw.githubusercontent.com/swkings/MQTT-Nexus/main/scripts/install-online.sh | bash
 
 # 从特定分支安装
-curl -fsSL https://raw.githubusercontent.com/swkings/MQTT-Nexus/develop/install-online.sh | bash
+curl -fsSL https://raw.githubusercontent.com/swkings/MQTT-Nexus/develop/scripts/install-online.sh | bash
 ```
 
 #### Windows (PowerShell)
 
-``powershell
+```powershell
 # 从 main 分支安装（PowerShell 5.1+ 或 PowerShell 7+）
-powershell -Command "iwr -UseBasicParsing https://raw.githubusercontent.com/swkings/MQTT-Nexus/main/install-online.ps1 | iex"
+powershell -Command "iwr -UseBasicParsing https://raw.githubusercontent.com/swkings/MQTT-Nexus/main/scripts/install-online.ps1 | iex"
 
 # 或下载后手动运行
 # 1. 下载脚本
-iwr -UseBasicParsing https://raw.githubusercontent.com/swkings/MQTT-Nexus/main/install-online.ps1 -OutFile install-online.ps1
+iwr -UseBasicParsing https://raw.githubusercontent.com/swkings/MQTT-Nexus/main/scripts/install-online.ps1 -OutFile install-online.ps1
 
 # 2. 运行脚本
 .\install-online.ps1
@@ -92,21 +92,21 @@ git clone https://github.com/swkings/MQTT-Nexus.git
 cd MQTT-Nexus
 
 # 2. 运行安装脚本
-chmod +x install.sh
-./install.sh
+chmod +x scripts/install.sh
+./scripts/install.sh
 ```
 
 #### 安装选项
 
 ```bash
 # 仅安装依赖（跳过构建）
-./install.sh --skip-build
+./scripts/install.sh --skip-build
 
-# 安装并构建 Electron 桌面应用
-./install.sh --electron
+# 安装并仅构建 Web 版本
+./scripts/install.sh --no-electron
 
 # 查看帮助
-./install.sh --help
+./scripts/install.sh --help
 ```
 
 ### Windows
@@ -119,20 +119,20 @@ git clone https://github.com/swkings/MQTT-Nexus.git
 cd MQTT-Nexus
 
 REM 2. 运行安装脚本
-install.bat
+scripts\install.bat
 ```
 
 #### 安装选项
 
 ```batch
 REM 仅安装依赖（跳过构建）
-install.bat --skip-build
+scripts\install.bat --skip-build
 
-REM 安装并构建 Electron 桌面应用
-install.bat --electron
+REM 安装并仅构建 Web 版本
+scripts\install.bat --no-electron
 
 REM 查看帮助
-install.bat --help
+scripts\install.bat --help
 ```
 
 ---
@@ -371,9 +371,10 @@ npm run electron:dev
 
 安装成功后，请参考：
 
-- **[README.md](README.md)** - 项目介绍和快速开始
-- **[ELECTRON.md](ELECTRON.md)** - Electron 开发指南
-- **[MQTT_PROTOCOL_GUIDE.md](MQTT_PROTOCOL_GUIDE.md)** - MQTT 协议使用指南
+- **[README.md](README.md)** - 项目介绍、开发与构建
+- **[ONLINE_INSTALL.md](ONLINE_INSTALL.md)** - 在线安装指南
+- **[WINDOWS_INSTALL.md](WINDOWS_INSTALL.md)** - Windows 安装指南
+- **[QUICK_REFERENCE.md](QUICK_REFERENCE.md)** - 常用命令参考
 
 ---
 

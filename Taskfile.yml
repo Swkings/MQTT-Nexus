@@ -1,0 +1,47 @@
+version: '3'
+
+tasks:
+  lint:
+    desc: Type-check the project
+    cmds:
+      - npm run lint
+
+  run:
+    desc: Start the Vite development server
+    cmds:
+      - npm run dev
+  
+  run:app:
+    desc: Start the application
+    cmds:
+      - npm run electron:dev
+
+  build:
+    desc: Build the web application
+    cmds:
+      - npm run build
+
+  build:app:
+    desc: Build the application for current platform
+    cmds:
+      - npm run electron:build
+
+  build:app:win:
+    desc: Build the application for Windows platform
+    cmds:
+      - npm run electron:build:win
+  
+  build:app:linux:
+    desc: Build the application for Linux platform
+    cmds:
+      - npm run electron:build:linux
+
+  build:app:mac:
+    desc: Build the application for macOS platform
+    cmds:
+      - npm run electron:build:mac
+
+  upload:
+    desc: Upload release assets to GitHub Releases
+    cmds:
+      - npm run release:upload

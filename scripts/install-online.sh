@@ -1,12 +1,12 @@
 #!/bin/bash
 
 # =============================================================================
-# MQTT-Nexus 一键安装脚本
+# MQTT-Nexus 在线安装脚本
 # =============================================================================
-# 描述：自动安装 MQTT-Nexus 应用的所有依赖并完成构建
+# 描述：通过 curl/wget 直接下载并安装 MQTT-Nexus 应用
 # 支持：Linux、macOS、Windows (Git Bash)
-# 要求：Node.js >= 18.x, npm >= 9.x
-# 用法：./install.sh [--skip-build] [--electron]
+# 要求：Node.js >= 18.x, npm >= 9.x, Git
+# 用法：curl -fsSL https://raw.githubusercontent.com/Swkings/MQTT-Nexus/main/scripts/install-online.sh | bash
 # =============================================================================
 
 set -e
@@ -43,6 +43,209 @@ error() {
 
 step() {
     echo -e "\n${CYAN}[STEP]${NC} $1"
+}
+
+# -----------------------------------------------------------------------------
+# 配置
+# -----------------------------------------------------------------------------
+REPO_URL="https://github.com/swkings/MQTT-Nexus.git"
+BRANCH="main"
+INSTALL_DIR="./mqtt-nexus"
+BUILD_ELECTRON=true  # ✅ 默认构建 Electron 桌面应用
+
+# -----------------------------------------------------------------------------
+# 构建 Electron 应用
+# -----------------------------------------------------------------------------
+build_electron() {
+    step "Building Electron desktop application..."
+    
+    cd "$INSTALL_DIR"
+    
+    info "Compiling Electron TypeScript..."
+    npx tsc -p electron/tsconfig.json
+    
+    if [ $? -ne 0 ]; then
+        error "Failed to compile Electron"
+    fi
+    
+    info "Building Electron package for current platform..."
+    if [ "$OS" == "linux" ]; then
+        npm run electron:build:linux
+    elif [ "$OS" == "macos" ]; then
+        npm run electron:build:mac
+    elif [ "$OS" == "windows" ]; then
+        npm run electron:build:win
+    else
+        npm run electron:build
+    fi
+    
+    if [ $? -eq 0 ]; then
+        success "Electron application built successfully!"
+        info "Installer location: $INSTALL_DIR/release/"
+    else
+        error "Failed to build Electron package"
+    fi
+    
+    cd ..
+}
+
+# -----------------------------------------------------------------------------
+# 安装 Electron 应用到系统
+# -----------------------------------------------------------------------------
+run_privileged() {
+    if [ "$(id -u)" -eq 0 ]; then
+        "$@"
+    elif command -v sudo >/dev/null 2>&1; then
+        sudo "$@"
+    else
+        warning "This install step requires root privileges. Re-run with sudo or install the package manually."
+        return 1
+    fi
+}
+
+install_electron_package() {
+    if [ "$BUILD_ELECTRON" != true ]; then
+        return 0
+    fi
+
+    step "Installing Electron desktop application..."
+
+    if [ "$OS" = "linux" ]; then
+        local deb_pkg rpm_pkg
+        deb_pkg=$(ls -t "$INSTALL_DIR"/release/*.deb 2>/dev/null | head -n 1 || true)
+        rpm_pkg=$(ls -t "$INSTALL_DIR"/release/*.rpm 2>/dev/null | head -n 1 || true)
+
+        if [ -n "$deb_pkg" ]; then
+            info "Installing Debian package: $deb_pkg"
+            if command -v apt >/dev/null 2>&1; then
+                run_privileged apt install -y "./$deb_pkg"
+            elif command -v apt-get >/dev/null 2>&1; then
+                run_privileged dpkg -i "$deb_pkg" || run_privileged apt-get install -f -y
+            elif command -v dpkg >/dev/null 2>&1; then
+                run_privileged dpkg -i "$deb_pkg"
+            else
+                warning "No supported Debian package installer found. Install manually: sudo dpkg -i $deb_pkg"
+                return 0
+            fi
+            success "Desktop application installed successfully!"
+            return 0
+        fi
+
+        if [ -n "$rpm_pkg" ]; then
+            info "Installing RPM package: $rpm_pkg"
+            if command -v dnf >/dev/null 2>&1; then
+                run_privileged dnf install -y "$rpm_pkg"
+            elif command -v yum >/dev/null 2>&1; then
+                run_privileged yum install -y "$rpm_pkg"
+            elif command -v rpm >/dev/null 2>&1; then
+                run_privileged rpm -Uvh "$rpm_pkg"
+            else
+                warning "No supported RPM package installer found. Install manually: sudo rpm -Uvh $rpm_pkg"
+                return 0
+            fi
+            success "Desktop application installed successfully!"
+            return 0
+        fi
+
+        warning "No .deb or .rpm package found in $INSTALL_DIR/release/."
+    elif [ "$OS" = "macos" ]; then
+        local dmg_pkg mount_point app_path
+        dmg_pkg=$(ls -t "$INSTALL_DIR"/release/*.dmg 2>/dev/null | head -n 1 || true)
+        if [ -z "$dmg_pkg" ]; then
+            warning "No .dmg package found in $INSTALL_DIR/release/."
+            return 0
+        fi
+
+        info "Mounting DMG package: $dmg_pkg"
+        mount_point=$(hdiutil attach "$dmg_pkg" -nobrowse | awk '/\/Volumes\// {print substr($0, index($0, "/Volumes/")); exit}')
+        if [ -z "$mount_point" ]; then
+            warning "Failed to mount DMG. Install manually: open $dmg_pkg"
+            return 0
+        fi
+
+        app_path=$(find "$mount_point" -maxdepth 1 -name "*.app" -print -quit)
+        if [ -n "$app_path" ]; then
+            info "Copying $(basename "$app_path") to /Applications..."
+            run_privileged cp -R "$app_path" /Applications/
+            success "Desktop application installed successfully!"
+        else
+            warning "No .app found in mounted DMG. Install manually: open $dmg_pkg"
+        fi
+        hdiutil detach "$mount_point" -quiet || true
+    elif [ "$OS" = "windows" ]; then
+        local exe_pkg
+        exe_pkg=$(ls -t "$INSTALL_DIR"/release/*Setup*.exe "$INSTALL_DIR"/release/*.exe 2>/dev/null | head -n 1 || true)
+        if [ -n "$exe_pkg" ]; then
+            info "Starting Windows installer: $exe_pkg"
+            "$exe_pkg"
+            success "Desktop installer completed."
+        else
+            warning "No Windows installer found in $INSTALL_DIR/release/."
+        fi
+    else
+        warning "Automatic system install is not supported for OS: $OS"
+    fi
+}
+
+# -----------------------------------------------------------------------------
+# 显示完成信息
+# -----------------------------------------------------------------------------
+show_completion() {
+    echo -e "\n${GREEN}╔════════════════════════════════════════════════════════╗${NC}"
+    echo -e "${GREEN}║          MQTT-Nexus Installation Complete! 🎉           ║${NC}"
+    echo -e "${GREEN}╚════════════════════════════════════════════════════════╝${NC}\n"
+    
+    info "Application installed in: $(pwd)/$INSTALL_DIR"
+    
+    if [ "$BUILD_ELECTRON" = true ]; then
+        info "Desktop application built and installed successfully!"
+        info "Installers are available in: $INSTALL_DIR/release/"
+        echo -e "\n${CYAN}Quick Start:${NC}"
+        echo -e "  cd $INSTALL_DIR"
+        echo -e "  ${YELLOW}Run Desktop App:${NC}    ./release/MQTT-Nexus[version].[ext]"
+        echo -e "  ${YELLOW}Development Mode:${NC}   npm run electron:dev"
+        echo -e "  ${YELLOW}Rebuild App:${NC}        npm run electron:build"
+    else
+        info "Web application built successfully!"
+        echo -e "\n${CYAN}Quick Start:${NC}"
+        echo -e "  cd $INSTALL_DIR"
+        echo -e "  ${YELLOW}npm run dev${NC}              # Start development server"
+        echo -e "  ${YELLOW}npm run build${NC}            # Build for production"
+        echo -e "  ${YELLOW}npm run electron:build${NC}   # Build desktop app"
+    fi
+    
+    echo -e "\n${CYAN}Documentation:${NC}"
+    echo -e "  Check README.md for more information"
+    echo -e "  Environment config: $INSTALL_DIR/.env.local"
+    
+    echo -e "\n${GREEN}Happy coding! 🚀${NC}\n"
+}
+
+# -----------------------------------------------------------------------------
+# 显示使用说明
+# -----------------------------------------------------------------------------
+show_usage() {
+    echo "MQTT-Nexus Online Installation Script"
+    echo ""
+    echo "Usage: curl -fsSL <script-url> | bash"
+    echo ""
+    echo "Options:"
+    echo "  --no-electron     Skip Electron desktop application build (web only)"
+    echo "  --help            Show this help message"
+    echo ""
+    echo "Examples:"
+    echo "  # Install with Electron desktop app (default)"
+    echo "  curl -fsSL https://raw.githubusercontent.com/swkings/MQTT-Nexus/main/scripts/install-online.sh | bash"
+    echo ""
+    echo "  # Install web version only"
+    echo "  curl -fsSL https://raw.githubusercontent.com/swkings/MQTT-Nexus/main/scripts/install-online.sh | bash -s -- --no-electron"
+    echo ""
+    echo "Requirements:"
+    echo "  - Node.js >= 18.x"
+    echo "  - npm >= 9.x"
+    echo "  - Git"
+    echo "  - curl or wget"
+    echo ""
 }
 
 # -----------------------------------------------------------------------------
@@ -86,11 +289,52 @@ check_requirements() {
     NPM_VERSION=$(npm -v)
     success "npm version: $NPM_VERSION"
     
-    # 检查 Git（可选）
-    if command -v git &> /dev/null; then
-        success "Git version: $(git --version)"
+    # 检查 Git
+    if ! command -v git &> /dev/null; then
+        error "Git is not installed. Please install Git first."
+    fi
+    success "Git version: $(git --version)"
+    
+    # 检查 curl 或 wget
+    if ! command -v curl &> /dev/null && ! command -v wget &> /dev/null; then
+        error "Neither curl nor wget is installed. Please install one of them."
+    fi
+    
+    if command -v curl &> /dev/null; then
+        DOWNLOADER="curl"
+        success "curl is available"
     else
-        warning "Git is not installed. Some features may be limited."
+        DOWNLOADER="wget"
+        success "wget is available"
+    fi
+}
+
+# -----------------------------------------------------------------------------
+# 下载仓库
+# -----------------------------------------------------------------------------
+download_repo() {
+    step "Downloading MQTT-Nexus from $REPO_URL..."
+    
+    # 检查目录是否已存在
+    if [ -d "$INSTALL_DIR" ]; then
+        warning "Directory '$INSTALL_DIR' already exists."
+        read -p "Do you want to overwrite it? (y/N): " confirm
+        if [[ "$confirm" =~ ^[Yy]$ ]]; then
+            rm -rf "$INSTALL_DIR"
+            info "Removed existing directory"
+        else
+            error "Installation cancelled"
+        fi
+    fi
+    
+    # 使用 git clone 下载
+    info "Cloning repository..."
+    git clone --depth 1 --branch "$BRANCH" "$REPO_URL" "$INSTALL_DIR"
+    
+    if [ $? -eq 0 ]; then
+        success "Repository downloaded successfully!"
+    else
+        error "Failed to download repository"
     fi
 }
 
@@ -100,13 +344,19 @@ check_requirements() {
 install_dependencies() {
     step "Installing dependencies..."
     
+    cd "$INSTALL_DIR"
+    
     info "Cleaning up old node_modules (if exists)..."
     rm -rf node_modules
     
     info "Installing npm dependencies (this may take a few minutes)..."
     npm ci
     
-    success "Dependencies installed successfully!"
+    if [ $? -eq 0 ]; then
+        success "Dependencies installed successfully!"
+    else
+        error "Failed to install dependencies"
+    fi
 }
 
 # -----------------------------------------------------------------------------
@@ -123,6 +373,8 @@ setup_environment() {
     else
         info ".env.local already exists, skipping..."
     fi
+    
+    cd ..
 }
 
 # -----------------------------------------------------------------------------
@@ -131,189 +383,18 @@ setup_environment() {
 build_app() {
     step "Building application..."
     
+    cd "$INSTALL_DIR"
+    
     info "Running npm build..."
     npm run build
     
-    success "Application built successfully!"
-}
-
-# -----------------------------------------------------------------------------
-# 构建 Electron 应用（可选）
-# -----------------------------------------------------------------------------
-build_electron() {
-    step "Building Electron desktop application..."
-    
-    info "Compiling Electron TypeScript..."
-    npx tsc -p electron/tsconfig.json
-    
-    info "Building Electron package for current platform..."
-    if [ "$OS" == "linux" ]; then
-        npm run electron:build:linux
-    elif [ "$OS" == "macos" ]; then
-        npm run electron:build:mac
-    elif [ "$OS" == "windows" ]; then
-        npm run electron:build:win
+    if [ $? -eq 0 ]; then
+        success "Application built successfully!"
     else
-        npm run electron:build
+        error "Failed to build application"
     fi
     
-    success "Electron application built successfully!"
-    info "Installer location: ./release/"
-}
-
-# -----------------------------------------------------------------------------
-# 安装 Electron 应用到系统
-# -----------------------------------------------------------------------------
-run_privileged() {
-    if [ "$(id -u)" -eq 0 ]; then
-        "$@"
-    elif command -v sudo >/dev/null 2>&1; then
-        sudo "$@"
-    else
-        warning "This install step requires root privileges. Re-run with sudo or install the package manually."
-        return 1
-    fi
-}
-
-install_electron_package() {
-    if [ "$BUILD_ELECTRON" != true ]; then
-        return 0
-    fi
-
-    step "Installing Electron desktop application..."
-
-    if [ "$OS" = "linux" ]; then
-        local deb_pkg rpm_pkg
-        deb_pkg=$(ls -t release/*.deb 2>/dev/null | head -n 1 || true)
-        rpm_pkg=$(ls -t release/*.rpm 2>/dev/null | head -n 1 || true)
-
-        if [ -n "$deb_pkg" ]; then
-            info "Installing Debian package: $deb_pkg"
-            if command -v apt >/dev/null 2>&1; then
-                run_privileged apt install -y "./$deb_pkg"
-            elif command -v apt-get >/dev/null 2>&1; then
-                run_privileged dpkg -i "$deb_pkg" || run_privileged apt-get install -f -y
-            elif command -v dpkg >/dev/null 2>&1; then
-                run_privileged dpkg -i "$deb_pkg"
-            else
-                warning "No supported Debian package installer found. Install manually: sudo dpkg -i $deb_pkg"
-                return 0
-            fi
-            success "Desktop application installed successfully!"
-            return 0
-        fi
-
-        if [ -n "$rpm_pkg" ]; then
-            info "Installing RPM package: $rpm_pkg"
-            if command -v dnf >/dev/null 2>&1; then
-                run_privileged dnf install -y "$rpm_pkg"
-            elif command -v yum >/dev/null 2>&1; then
-                run_privileged yum install -y "$rpm_pkg"
-            elif command -v rpm >/dev/null 2>&1; then
-                run_privileged rpm -Uvh "$rpm_pkg"
-            else
-                warning "No supported RPM package installer found. Install manually: sudo rpm -Uvh $rpm_pkg"
-                return 0
-            fi
-            success "Desktop application installed successfully!"
-            return 0
-        fi
-
-        warning "No .deb or .rpm package found in release/."
-    elif [ "$OS" = "macos" ]; then
-        local dmg_pkg mount_point app_path
-        dmg_pkg=$(ls -t release/*.dmg 2>/dev/null | head -n 1 || true)
-        if [ -z "$dmg_pkg" ]; then
-            warning "No .dmg package found in release/."
-            return 0
-        fi
-
-        info "Mounting DMG package: $dmg_pkg"
-        mount_point=$(hdiutil attach "$dmg_pkg" -nobrowse | awk '/\/Volumes\// {print substr($0, index($0, "/Volumes/")); exit}')
-        if [ -z "$mount_point" ]; then
-            warning "Failed to mount DMG. Install manually: open $dmg_pkg"
-            return 0
-        fi
-
-        app_path=$(find "$mount_point" -maxdepth 1 -name "*.app" -print -quit)
-        if [ -n "$app_path" ]; then
-            info "Copying $(basename "$app_path") to /Applications..."
-            run_privileged cp -R "$app_path" /Applications/
-            success "Desktop application installed successfully!"
-        else
-            warning "No .app found in mounted DMG. Install manually: open $dmg_pkg"
-        fi
-        hdiutil detach "$mount_point" -quiet || true
-    elif [ "$OS" = "windows" ]; then
-        local exe_pkg
-        exe_pkg=$(ls -t release/*Setup*.exe release/*.exe 2>/dev/null | head -n 1 || true)
-        if [ -n "$exe_pkg" ]; then
-            info "Starting Windows installer: $exe_pkg"
-            "$exe_pkg"
-            success "Desktop installer completed."
-        else
-            warning "No Windows installer found in release/."
-        fi
-    else
-        warning "Automatic system install is not supported for OS: $OS"
-    fi
-}
-
-# -----------------------------------------------------------------------------
-# 显示完成信息
-# -----------------------------------------------------------------------------
-show_completion() {
-    echo -e "\n${GREEN}╔════════════════════════════════════════════════════════╗${NC}"
-    echo -e "${GREEN}║          MQTT-Nexus Installation Complete! 🎉           ║${NC}"
-    echo -e "${GREEN}╚════════════════════════════════════════════════════════╝${NC}\n"
-    
-    if [ "$BUILD_ELECTRON" = true ]; then
-        info "Desktop application built and installed successfully!"
-        info "Installers are available in: ./release/"
-        echo -e "\n${CYAN}Quick Start:${NC}"
-        echo -e "  ${YELLOW}Run Desktop App:${NC}    ./release/MQTT-Nexus[version].[ext]"
-        echo -e "  ${YELLOW}Development Mode:${NC}   npm run electron:dev"
-        echo -e "  ${YELLOW}Rebuild App:${NC}        npm run electron:build"
-    else
-        info "Web application built successfully!"
-        info "To run development server: npm run dev"
-        info "To build Electron app: npm run electron:build"
-        echo -e "\n${CYAN}Quick Start:${NC}"
-        echo -e "  ${YELLOW}Development:${NC}   npm run dev"
-        echo -e "  ${YELLOW}Production:${NC}    npm run build && npm run preview"
-        echo -e "  ${YELLOW}Desktop App:${NC}   npm run electron:build"
-    fi
-    
-    echo -e "\n${CYAN}Documentation:${NC}"
-    echo -e "  Check README.md for more information"
-    echo -e "  Environment config: .env.local"
-    
-    echo -e "\n${GREEN}Happy coding! 🚀${NC}\n"
-}
-
-# -----------------------------------------------------------------------------
-# 显示使用说明
-# -----------------------------------------------------------------------------
-show_usage() {
-    echo "MQTT-Nexus Installation Script"
-    echo ""
-    echo "Usage: ./install.sh [OPTIONS]"
-    echo ""
-    echo "Options:"
-    echo "  --skip-build      Skip the build step (only install dependencies)"
-    echo "  --no-electron     Skip Electron desktop application build (web only)"
-    echo "  --help            Show this help message"
-    echo ""
-    echo "Examples:"
-    echo "  ./install.sh                    # Full installation with Electron app (default)"
-    echo "  ./install.sh --skip-build       # Only install dependencies"
-    echo "  ./install.sh --no-electron      # Build web version only"
-    echo ""
-    echo "Requirements:"
-    echo "  - Node.js >= 18.x"
-    echo "  - npm >= 9.x"
-    echo "  - Git (optional)"
-    echo ""
+    cd ..
 }
 
 # -----------------------------------------------------------------------------
@@ -321,21 +402,14 @@ show_usage() {
 # -----------------------------------------------------------------------------
 main() {
     echo -e "\n${CYAN}╔════════════════════════════════════════════════════════╗${NC}"
-    echo -e "${CYAN}║         MQTT-Nexus Installation Script                  ║${NC}"
+    echo -e "${CYAN}║         MQTT-Nexus Online Installation                  ║${NC}"
     echo -e "${CYAN}║         AI-Powered MQTT Desktop Client                  ║${NC}"
     echo -e "${CYAN}╚════════════════════════════════════════════════════════╝${NC}\n"
     
     # 解析参数
-    SKIP_BUILD=false
-    BUILD_ELECTRON=true  # ✅ 默认构建 Electron 桌面应用
-    
     while [[ $# -gt 0 ]]; do
         case $1 in
-            --skip-build)
-                SKIP_BUILD=true
-                shift
-                ;;
-            --no-electron)  # ✅ 修改为 --no-electron 表示不构建 Electron
+            --no-electron)
                 BUILD_ELECTRON=false
                 shift
                 ;;
@@ -355,6 +429,9 @@ main() {
     # 检查系统要求
     check_requirements
     
+    # 下载仓库
+    download_repo
+    
     # 安装依赖
     install_dependencies
     
@@ -362,16 +439,12 @@ main() {
     setup_environment
     
     # 构建应用
-    if [ "$SKIP_BUILD" = false ]; then
-        build_app
-        
-        # 构建 Electron（默认执行）
-        if [ "$BUILD_ELECTRON" = true ]; then
-            build_electron
-            install_electron_package
-        fi
-    else
-        warning "Skipping build step as requested"
+    build_app
+    
+    # 构建 Electron 应用
+    if [ "$BUILD_ELECTRON" = true ]; then
+        build_electron
+        install_electron_package
     fi
     
     # 显示完成信息
