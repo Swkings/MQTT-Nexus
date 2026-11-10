@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Server, Plus, Trash2, Plug, Unplug, AlertCircle, Edit2, PanelLeftClose, PanelLeftOpen, Hash, X, Check, Palette, Download, Upload, Library, RefreshCw } from 'lucide-react';
+import { Server, Plus, Trash2, Plug, Unplug, AlertCircle, Edit2, PanelLeftClose, PanelLeftOpen, Hash, X, Check, Palette, Download, Upload, Library, RefreshCw, Search } from 'lucide-react';
 import { BrokerConfig } from '../types';
 import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
@@ -60,6 +60,13 @@ export function BrokerSidebar({
   configFeedback,
 }: BrokerSidebarProps) {
   const { theme, themeClasses } = useTheme();
+  const [brokerSearch, setBrokerSearch] = useState('');
+  const normalizedSearch = brokerSearch.trim().toLowerCase();
+  const filteredBrokers = brokers.filter((broker) => {
+    const displayUrl = broker.url || `${broker.protocol}://${broker.host}:${broker.port}${broker.path}`;
+    return broker.name.toLowerCase().includes(normalizedSearch)
+      || displayUrl.toLowerCase().includes(normalizedSearch);
+  });
   // favoriteTopics state is now managed by parent component via props
   const [showAddTopicModal, setShowAddTopicModal] = useState(false);
   const [newTopic, setNewTopic] = useState('');
@@ -203,6 +210,43 @@ export function BrokerSidebar({
         </div>
       </div>
 
+      <div className={cn("px-3 py-2 border-b shrink-0", themeClasses.border, themeClasses.panelBg)}>
+        <div className="relative">
+          <Search className={cn("absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 pointer-events-none", themeClasses.textSecondary)} />
+          <input
+            type="text"
+            value={brokerSearch}
+            onChange={(e) => setBrokerSearch(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') setBrokerSearch('');
+            }}
+            placeholder="Search brokers..."
+            aria-label="Search brokers by name or address"
+            className={cn(
+              "block w-full pl-8 pr-8 py-1.5 border rounded-md leading-5 text-sm transition-colors focus:outline-none focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500",
+              theme.overlay === 'transparent'
+                ? theme.mode === 'light'
+                  ? "bg-white/50 placeholder-slate-400 text-slate-900 border-slate-300"
+                  : "bg-slate-800/50 placeholder-slate-500 text-slate-100 border-slate-600"
+                : theme.mode === 'light'
+                  ? "bg-white placeholder-slate-400 text-slate-900 border-slate-300"
+                  : "bg-slate-800 placeholder-slate-500 text-slate-100 border-slate-600"
+            )}
+          />
+          {brokerSearch && (
+            <button
+              type="button"
+              onClick={() => setBrokerSearch('')}
+              aria-label="Clear broker search"
+              title="Clear search"
+              className={cn("absolute right-1 top-1/2 -translate-y-1/2 p-1 rounded transition-colors hover:text-cyan-400 hover:bg-cyan-500/10", themeClasses.textSecondary)}
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
+      </div>
+
       {configFeedback && (
         <div className={cn(
           "shrink-0 px-3 py-2 text-xs border-b",
@@ -217,17 +261,19 @@ export function BrokerSidebar({
 
       <div className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-2">
         <AnimatePresence initial={false}>
-          {brokers.length === 0 ? (
+          {filteredBrokers.length === 0 ? (
             <motion.div
+              key="empty-brokers"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="text-center text-slate-500 text-xs py-8"
+              className={cn("text-center text-xs py-8", themeClasses.textSecondary)}
+              role="status"
             >
-              No brokers added
+              {brokers.length === 0 ? 'No brokers added' : 'No matching brokers'}
             </motion.div>
           ) : (
-            brokers.map((broker) => {
+            filteredBrokers.map((broker) => {
               const isActive = activeBrokerId === broker.id;
               const displayUrl = broker.url || `${broker.protocol}://${broker.host}:${broker.port}${broker.path}`;
               
