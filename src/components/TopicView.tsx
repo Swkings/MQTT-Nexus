@@ -77,7 +77,8 @@ export function TopicView({ topic, messages, onClear }: TopicViewProps) {
   const [showHistory, setShowHistory] = useState(false);
   const [diffMode, setDiffMode] = useState<'inline' | 'latest' | 'split'>('inline');
   const [searchTime, setSearchTime] = useState('');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  // History list is shown newest first (reverse chronological order) by default.
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [activeChartPaths, setActiveChartPaths] = useState<string[]>([]);
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [isCodeGenOpen, setIsCodeGenOpen] = useState(false);
@@ -162,12 +163,9 @@ export function TopicView({ topic, messages, onClear }: TopicViewProps) {
       );
     }
     
-    // Default messages are descending (newest first).
-    if (sortOrder === 'asc') {
-      return [...filtered].reverse();
-    }
-    
-    return filtered;
+    // Sort by timestamp: 'desc' = newest first (default), 'asc' = oldest first.
+    const direction = sortOrder === 'asc' ? 1 : -1;
+    return [...filtered].sort((a, b) => (a.timestamp - b.timestamp) * direction);
   }, [topic, historyMessages, searchTime, sortOrder]);
 
   const liveTopicMessages = useMemo(() => {
@@ -178,7 +176,8 @@ export function TopicView({ topic, messages, onClear }: TopicViewProps) {
         new Date(message.timestamp).toLocaleTimeString().toLowerCase().includes(searchTime.toLowerCase())
       );
     }
-    return sortOrder === 'asc' ? [...filtered].reverse() : filtered;
+    const direction = sortOrder === 'asc' ? 1 : -1;
+    return [...filtered].sort((a, b) => (a.timestamp - b.timestamp) * direction);
   }, [topic, messages, searchTime, sortOrder]);
 
   const latestMessage = useMemo(() => {
@@ -749,8 +748,8 @@ export function TopicView({ topic, messages, onClear }: TopicViewProps) {
                     <button
                       onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
                       className={cn("p-1.5 rounded-md text-slate-400 hover:text-cyan-400 transition-colors", theme.overlay === 'transparent' ? "hover:bg-slate-800/50" : "hover:bg-slate-800")}
-                      title={`Sort ${sortOrder === 'asc' ? 'Descending' : 'Ascending'}`}
-                      aria-label={`Sort ${sortOrder === 'asc' ? 'Descending' : 'Ascending'}`}
+                      title={`Sorted: ${sortOrder === 'desc' ? 'Newest first (time descending)' : 'Oldest first (time ascending)'} - click to switch`}
+                      aria-label={`Sorted: ${sortOrder === 'desc' ? 'Newest first (time descending)' : 'Oldest first (time ascending)'} - click to switch`}
                     >
                       {sortOrder === 'asc'
                         ? <ArrowUp className="w-4 h-4 text-cyan-400" />
