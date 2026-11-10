@@ -36,11 +36,12 @@
   "nsis": {
     "oneClick": false,
     "allowToChangeInstallationDirectory": true,
-    "createDesktopShortcut": true
+    "createDesktopShortcut": true,
+    "artifactName": "MQTT-Nexus-Setup-${version}.${ext}"
   },
   "publish": {
     "provider": "github",
-    "owner": "Swkings",
+    "owner": "victorfengming",
     "repo": "MQTT-Nexus"
   }
 }
