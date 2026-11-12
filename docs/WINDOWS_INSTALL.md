@@ -223,7 +223,7 @@ npm run electron:dev
 
 ## 📚 相关文档
 
-- **[README.md](README.md)** - 项目介绍
+- **[README.md](../README.md)** - 项目介绍
 - **[INSTALL.md](INSTALL.md)** - 详细安装指南
 - **[QUICK_REFERENCE.md](QUICK_REFERENCE.md)** - 快速参考
 

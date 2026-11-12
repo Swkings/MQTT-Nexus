@@ -264,7 +264,7 @@ done
 
 安装完成后，请参考：
 
-- **[README.md](README.md)** - 项目介绍和功能
+- **[README.md](../README.md)** - 项目介绍和功能
 - **[QUICK_REFERENCE.md](QUICK_REFERENCE.md)** - 快速参考卡片
 - **[INSTALL.md](INSTALL.md)** - 详细安装指南
 
