@@ -1,4 +1,4 @@
-# MQTT Nexus - AI-Powered MQTT Desktop Client 🚀
+# MQTT Nexus - MQTT Desktop Client 🚀
 
 <div align="center">
 
@@ -26,6 +26,13 @@
 
 > **Note**: Browser environment only supports `ws://` and `wss://`. For full MQTT protocol support, use the Electron desktop app.
 
+## 🖼️ Screenshots
+
+<div align="center">
+	<img src="docs/fig/dashboard.png" alt="MQTT Nexus dashboard with brokers, topic tree, and messages" width="32%">
+	<img src="docs/fig/dataview.png" alt="MQTT message data view with structured JSON" width="32%">
+	<img src="docs/fig/publish.png" alt="MQTT publish message panel" width="32%">
+</div>
 
 ## 🚀 Quick Start
 
@@ -118,28 +125,9 @@ npm run dev
 
 Then visit http://localhost:3000
 
-### Environment Setup
-
-Create a `.env.local` file with your Gemini API key:
-
-```
-VITE_APP_DEFAULT_PORT=3001
-VITE_APP_DEFAULT_MQTT_PORT=1883
-GEMINI_API_KEY=your_api_key_here
-```
-
 ---
 
 ## 📦 Build & Distribution
-
-Run the common tasks with [go-task](https://taskfile.dev/):
-
-```bash
-task lint
-task run
-task build
-task upload
-```
 
 Run the common repository tasks with [go-task](https://taskfile.dev/):
 
@@ -220,10 +208,10 @@ Runtime error logs are written to `~/.mqtt-nexus/main.log`.
 
 ## 📚 Documentation
 
-- **[Installation Guide](INSTALL.md)** - Installation and troubleshooting
-- **[Online Installation Guide](ONLINE_INSTALL.md)** - Online installation options
-- **[Windows Installation Guide](WINDOWS_INSTALL.md)** - Windows-specific instructions
-- **[Quick Reference](QUICK_REFERENCE.md)** - Common commands and configuration
+- **[Installation Guide](docs/INSTALL.md)** - Installation and troubleshooting
+- **[Online Installation Guide](docs/ONLINE_INSTALL.md)** - Online installation options
+- **[Windows Installation Guide](docs/WINDOWS_INSTALL.md)** - Windows-specific instructions
+- **[Quick Reference](docs/QUICK_REFERENCE.md)** - Common commands and configuration
 - **[AI Studio App](https://ai.studio/apps/9135169b-d016-48af-b698-76e4e67fece04)** - View in AI Studio
 
 ---

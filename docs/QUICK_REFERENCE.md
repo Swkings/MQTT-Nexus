@@ -194,7 +194,7 @@ npm install --verbose
 
 ## 📚 文档链接
 
-- **[README.md](README.md)** - 项目介绍和功能
+- **[README.md](../README.md)** - 项目介绍和功能
 - **[INSTALL.md](INSTALL.md)** - 详细安装指南
 - **[ONLINE_INSTALL.md](ONLINE_INSTALL.md)** - 在线安装指南
 - **[WINDOWS_INSTALL.md](WINDOWS_INSTALL.md)** - Windows 安装指南

@@ -371,7 +371,7 @@ npm run electron:dev
 
 安装成功后，请参考：
 
-- **[README.md](README.md)** - 项目介绍、开发与构建
+- **[README.md](../README.md)** - 项目介绍、开发与构建
 - **[ONLINE_INSTALL.md](ONLINE_INSTALL.md)** - 在线安装指南
 - **[WINDOWS_INSTALL.md](WINDOWS_INSTALL.md)** - Windows 安装指南
 - **[QUICK_REFERENCE.md](QUICK_REFERENCE.md)** - 常用命令参考
